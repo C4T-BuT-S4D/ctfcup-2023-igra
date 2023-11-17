@@ -2,7 +2,7 @@ SHELL := /bin/bash
 
 .PHONY: lint-go
 lint-go:
-	cd game && golangci-lint run -v --config ../.golangci.yml
+	golangci-lint run -v --config .golangci.yml
 
 .PHONY: lint-proto
 lint-proto:
@@ -13,11 +13,11 @@ lint: lint-go lint-proto
 
 .PHONY: goimports
 goimports:
-	cd game && gofancyimports fix --local github.com/c4t-but-s4d/igra/game -w $(shell find . -type f -name '*.go' -not -path "./pkg/proto/*")
+	gofancyimports fix --local github.com/c4t-but-s4d/ctfcup-2023-igra -w $(shell find . -type f -name '*.go' -not -path "./pkg/proto/*")
 
 .PHONY: test
 test:
-	cd game && go test -race -timeout 1m ./...
+	go test -race -timeout 1m ./...
 
 .PHONY: validate
 validate: lint test

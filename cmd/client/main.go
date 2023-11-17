@@ -1,30 +1,29 @@
 package main
 
 import (
-	"embed"
+	"image"
+	"image/color"
+	_ "image/png"
+	"log"
+
 	"github.com/Rulox/ebitmx"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/salviati/go-tmx/tmx"
-	"image"
-	"image/color"
-	"log"
 
-	_ "image/png"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/resources"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/world"
 )
 
-//go:embed tiles
-var embeddedFS embed.FS
-
-//func (p *Player) Draw(screen *ebiten.Image) {
+// func (p *Player) Draw(screen *ebiten.Image) {
 //	op := &ebiten.DrawImageOptions{}
 //	op.GeoM.Translate(
 //		float64(p.pos.X-p.img.Bounds().Dx()/2),
 //		float64(p.pos.Y-p.img.Bounds().Dy()/2),
 //	)
 //	screen.DrawImage(p.img, op)
-//}
+// }
 //
-//func (p *Player) Update() error {
+// func (p *Player) Update() error {
 //
 //	if ebiten.IsKeyPressed(ebiten.KeyW) {
 //		p.pos.Y -= 1
@@ -40,33 +39,33 @@ var embeddedFS embed.FS
 //	}
 //
 //	return nil
-//}
+// }
 
 type Game struct {
 	gameMap     *tmx.Map
 	tileSet     *ebitmx.EbitenTileset
 	resultImage *ebiten.Image
-	player      *Player
-	world       *World
+	player      *world.Player
+	world       *world.World
 }
 
 func (g *Game) Update() error {
 	currentPos := g.world.Player.Rectangle()
 	if ebiten.IsKeyPressed(ebiten.KeyW) {
-		currentPos.TopY -= 1
-		currentPos.BottomY -= 1
+		currentPos.TopY--
+		currentPos.BottomY--
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyA) {
-		currentPos.LeftX -= 1
-		currentPos.RightX -= 1
+		currentPos.LeftX--
+		currentPos.RightX--
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyS) {
-		currentPos.TopY += 1
-		currentPos.BottomY += 1
+		currentPos.TopY++
+		currentPos.BottomY++
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyD) {
-		currentPos.LeftX += 1
-		currentPos.RightX += 1
+		currentPos.LeftX++
+		currentPos.RightX++
 	}
 
 	intersects := g.world.Intersects(currentPos)
@@ -84,12 +83,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	for _, o := range g.world.Objects {
 		op := &ebiten.DrawImageOptions{}
 		op.GeoM.Translate(
-			float64(o.Rectangle().LeftX),
-			float64(o.Rectangle().TopY),
+			o.Rectangle().LeftX,
+			o.Rectangle().TopY,
 		)
 		screen.DrawImage(o.Image(), op)
 	}
-	//for _, l := range g.gameMap.Layers {
+	// for _, l := range g.gameMap.Layers {
 	//	if l.Name != "tiles" {
 	//		continue
 	//	}
@@ -110,31 +109,31 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	//			screen.DrawImage(g.getTileImgByID(tileID), op)
 	//		}
 	//	}
-	//}
+	// }
 
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Translate(
-		float64(g.world.Player.Rectangle().LeftX),
-		float64(g.world.Player.Rectangle().TopY),
+		g.world.Player.Rectangle().LeftX,
+		g.world.Player.Rectangle().TopY,
 	)
 	screen.DrawImage(g.world.Player.Image(), op)
 
-	//cx, cy := ebiten.CursorPosition()
-	//ebitenutil.DebugPrint(
+	// cx, cy := ebiten.CursorPosition()
+	// ebitenutil.DebugPrint(
 	//	screen,
 	//	fmt.Sprintf("cx:%d, cy:%d\ntype: %s\n", cx, cy, g.currentTileType),
-	//)
+	// )
 }
 
-func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
+func (g *Game) Layout(_, _ int) (screenWidth, screenHeight int) {
 	return 640, 480
 }
 
-func getTileImgByID(_id tmx.ID, tileSet *ebitmx.EbitenTileset, img *ebiten.Image) *ebiten.Image {
+func getTileImgByID(tileID tmx.ID, tileSet *ebitmx.EbitenTileset, img *ebiten.Image) *ebiten.Image {
 	// The tsx format starts counting tiles from 1, so to make these calculations
 	// work correctly, we need to decrement the ID by 1
-	id := int(_id)
-	//id -= 1
+	id := int(tileID)
+	// id -= 1
 
 	x0 := (id % tileSet.TilesetWidth) * tileSet.TileWidth
 	y0 := (id / tileSet.TilesetWidth) * tileSet.TileHeight
@@ -143,12 +142,12 @@ func getTileImgByID(_id tmx.ID, tileSet *ebitmx.EbitenTileset, img *ebiten.Image
 	return img.SubImage(image.Rect(x0, y0, x1, y1)).(*ebiten.Image)
 }
 
-func findPlayerSpawn(map_ *tmx.Map) Point {
-	for _, og := range map_.ObjectGroups {
+func findPlayerSpawn(tileMap *tmx.Map) world.Point {
+	for _, og := range tileMap.ObjectGroups {
 		for _, o := range og.Objects {
 			for _, p := range o.Properties {
 				if p.Name == "type" && p.Value == "player_spawn" {
-					return Point{int(o.X), int(o.Y)}
+					return world.NewPoint(int(o.X), int(o.Y))
 				}
 			}
 		}
@@ -160,7 +159,7 @@ func findPlayerSpawn(map_ *tmx.Map) Point {
 func main() {
 	var resultImage *ebiten.Image
 	{
-		imgFile, err := embeddedFS.Open("tiles/result.png")
+		imgFile, err := resources.EmbeddedFS.Open("tiles/result.png")
 		if err != nil {
 			log.Fatalf("Failed to open result.png: %v", err)
 		}
@@ -173,7 +172,7 @@ func main() {
 		resultImage = ebiten.NewImageFromImage(img)
 	}
 
-	mapFile, err := embeddedFS.Open("tiles/test.tmx")
+	mapFile, err := resources.EmbeddedFS.Open("tiles/test.tmx")
 	if err != nil {
 		log.Fatalf("Failed to open map file: %v", err)
 	}
@@ -183,7 +182,7 @@ func main() {
 		log.Fatalf("Failed to load map: %v", err)
 	}
 
-	iceTiles, err := ebitmx.GetTilesetFromFS(embeddedFS, "tiles/ice.tsx")
+	iceTiles, err := ebitmx.GetTilesetFromFS(resources.EmbeddedFS, "tiles/ice.tsx")
 	if err != nil {
 		log.Fatalf("Failed to load tiles: %v", err)
 	}
@@ -191,7 +190,7 @@ func main() {
 	pimg := ebiten.NewImage(16, 16)
 	pimg.Fill(color.White)
 
-	world := World{}
+	w := world.World{}
 	for _, l := range testMap.Layers {
 		for x := 0; x < testMap.Width; x++ {
 			for y := 0; y < testMap.Height; y++ {
@@ -201,31 +200,31 @@ func main() {
 				}
 
 				tileID := dt.ID
-				world.AddObject(StaticTile{
-					width:  testMap.TileWidth,
-					height: testMap.TileHeight,
-					x:      x * testMap.TileWidth,
-					y:      y * testMap.TileHeight,
-					img:    getTileImgByID(tileID, iceTiles, resultImage),
-				})
+				w.AddObject(world.NewStaticTile(
+					testMap.TileWidth,
+					testMap.TileHeight,
+					x*testMap.TileWidth,
+					y*testMap.TileHeight,
+					getTileImgByID(tileID, iceTiles, resultImage),
+				))
 			}
 		}
 	}
 
 	ppos := findPlayerSpawn(testMap)
-	world.Player = &Player{
-		img:    pimg,
-		width:  pimg.Bounds().Dx(),
-		height: pimg.Bounds().Dy(),
-		x:      float64(ppos.X),
-		y:      float64(ppos.Y),
-	}
+	w.Player = world.NewPlayer(
+		pimg.Bounds().Dx(),
+		pimg.Bounds().Dy(),
+		float64(ppos.X),
+		float64(ppos.Y),
+		pimg,
+	)
 
 	g := Game{
 		gameMap:     testMap,
 		tileSet:     iceTiles,
 		resultImage: resultImage,
-		world:       &world,
+		world:       &w,
 	}
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	if err := ebiten.RunGame(&g); err != nil {

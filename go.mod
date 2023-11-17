@@ -1,4 +1,4 @@
-module igra
+module github.com/c4t-but-s4d/ctfcup-2023-igra
 
 go 1.21
 

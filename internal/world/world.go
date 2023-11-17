@@ -1,13 +1,19 @@
-package main
+package world
 
-import (
-	"github.com/hajimehoshi/ebiten/v2"
-)
+import "github.com/hajimehoshi/ebiten/v2"
 
 type ObjectType int
 
 type Point struct {
-	X, Y int
+	X int
+	Y int
+}
+
+func NewPoint(x, y int) Point {
+	return Point{
+		X: x,
+		Y: y,
+	}
 }
 
 type Rectangle struct {
@@ -40,7 +46,7 @@ func (w *World) AddObject(o GameObject) *World {
 func (w *World) Intersects(x Rectangle) []GameObject {
 	var result []GameObject
 	for _, o := range w.Objects {
-		//fmt.Printf("Checking %+v and %+v\n", o.Rectangle(), x)
+		// fmt.Printf("Checking %+v and %+v\n", o.Rectangle(), x)
 		if o.Rectangle().Intersects(x) {
 			result = append(result, o)
 		}
