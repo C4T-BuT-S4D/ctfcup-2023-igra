@@ -12,7 +12,7 @@ type Object struct {
 	Acceleration *geometry.Vector
 }
 
-const GravityAcceleration = 1
+const GravityAcceleration = 1.0 / 6.0
 
 func NewObject(o *object.Object) *Object {
 	return &Object{

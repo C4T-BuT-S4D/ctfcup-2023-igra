@@ -1,0 +1,35 @@
+syntax = "proto3";
+package gameserver;
+
+option go_package = "gameserver";
+
+message PingRequest {
+}
+
+message PingResponse {
+}
+
+message ClientEvent {
+  message KeysPressed {
+    bool WPressed = 1;
+    bool APressed = 2;
+    bool SPressed = 3;
+    bool DPressed = 4;
+  }
+
+  KeysPressed keysPressed = 1;
+}
+
+message ClientEventRequest {
+  ClientEvent event = 1;
+  string checksum = 2;
+}
+
+message ServerEvent {
+
+}
+
+service GameServer {
+  rpc Ping(PingRequest) returns (PingResponse);
+  rpc ProcessEvent(stream ClientEventRequest) returns (stream ServerEvent);
+}

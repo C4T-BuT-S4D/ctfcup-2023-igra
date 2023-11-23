@@ -1,45 +1,59 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	_ "image/png"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"log"
+	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/engine"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/input"
+
+	gameserverpb "github.com/c4t-but-s4d/ctfcup-2023-igra/proto/go/gameserver"
 )
 
-// func (p *Player) Draw(screen *ebiten.Image) {
-//	op := &ebiten.DrawImageOptions{}
-//	op.GeoM.Translate(
-//		float64(p.pos.X-p.img.Bounds().Dx()/2),
-//		float64(p.pos.Y-p.img.Bounds().Dy()/2),
-//	)
-//	screen.DrawImage(p.img, op)
-// }
-//
-// func (p *Player) Update() error {
-//
-//	if ebiten.IsKeyPressed(ebiten.KeyW) {
-//		p.pos.Y -= 1
-//	}
-//	if ebiten.IsKeyPressed(ebiten.KeyA) {
-//		p.pos.X -= 1
-//	}
-//	if ebiten.IsKeyPressed(ebiten.KeyS) {
-//		p.pos.Y += 1
-//	}
-//	if ebiten.IsKeyPressed(ebiten.KeyD) {
-//		p.pos.X += 1
-//	}
-//
-//	return nil
-// }
+func NewGame(ctx context.Context, client gameserverpb.GameServerClient) (*Game, error) {
+	e, err := engine.New()
+	if err != nil {
+		return nil, fmt.Errorf("initializing engine: %w", err)
+	}
+
+	g := &Game{
+		Engine: e,
+	}
+	g.recvErrChan = make(chan error, 1)
+	g.serverEventChan = make(chan *gameserverpb.ServerEvent)
+
+	if client != nil {
+		es, err := client.ProcessEvent(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("creating event stream: %w", err)
+		}
+		g.cli = es
+
+		go func() {
+			se, err := es.Recv()
+			if err != nil {
+				g.recvErrChan <- err
+				return
+			}
+			g.serverEventChan <- se
+		}()
+	}
+
+	return g, nil
+}
 
 type Game struct {
 	Engine *engine.Engine
+	cli    gameserverpb.GameServer_ProcessEventClient
+
+	serverEventChan chan *gameserverpb.ServerEvent
+	recvErrChan     chan error
 }
 
 func (g *Game) Update() error {
@@ -58,6 +72,23 @@ func (g *Game) Update() error {
 		i.DPressed = true
 	}
 
+	select {
+	case err := <-g.recvErrChan:
+		return fmt.Errorf("server returned error: %w", err)
+	default:
+	}
+
+	// TODO(b1r1b1r1): Provide interface for checksum calculation.
+	checksum := ""
+	if g.cli != nil {
+		if err := g.cli.Send(&gameserverpb.ClientEventRequest{
+			Checksum: checksum,
+			Event:    input.ToProtoEvent(&i),
+		}); err != nil {
+			return fmt.Errorf("failed to send event to the server: %w", err)
+		}
+	}
+
 	if err := g.Engine.Update(&i); err != nil {
 		return fmt.Errorf("updating engine state: %w", err)
 	}
@@ -74,18 +105,29 @@ func (g *Game) Layout(_, _ int) (screenWidth, screenHeight int) {
 }
 
 func main() {
-	e, err := engine.New()
-	if err != nil {
-		log.Fatal("initializing engine: %w", err)
+	serverHost := ""
+	if len(os.Args) > 1 {
+		serverHost = os.Args[1]
 	}
 
-	g := Game{
-		Engine: e,
+	var client gameserverpb.GameServerClient
+	if serverHost != "" {
+		conn, err := grpc.Dial(serverHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			log.Fatalf("Failed to connect to server: %v", err)
+		}
+		defer conn.Close()
+		client = gameserverpb.NewGameServerClient(conn)
+	}
+
+	g, err := NewGame(context.Background(), client)
+	if err != nil {
+		log.Fatalf("Failed to create game: %v", err)
 	}
 
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
-	if err := ebiten.RunGame(&g); err != nil {
+	if err := ebiten.RunGame(g); err != nil {
 		log.Fatalf("Failed to run game: %v", err)
 	}
 }

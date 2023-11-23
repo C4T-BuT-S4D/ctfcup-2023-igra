@@ -17,6 +17,8 @@ import (
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/player"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/resources"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/tiles"
+
+	_ "image/png"
 )
 
 type Engine struct {
@@ -151,14 +153,14 @@ func (e *Engine) ProcessPlayerInput(inp *input.Input) {
 	}
 
 	if inp.WPressed {
-		e.Player.Speed.Y = -10
+		e.Player.Speed.Y = -3
 	}
 
 	switch {
 	case inp.APressed:
-		e.Player.Speed.X = -1
+		e.Player.Speed.X = -2
 	case inp.DPressed:
-		e.Player.Speed.X = 1
+		e.Player.Speed.X = 2
 	default:
 		e.Player.Speed.X = 0
 	}
