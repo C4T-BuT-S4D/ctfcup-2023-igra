@@ -3,67 +3,79 @@ package server
 import (
 	"context"
 	"errors"
-	"fmt"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/engine"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/input"
-	gameserverpb "github.com/c4t-but-s4d/ctfcup-2023-igra/proto/go/gameserver"
 	"io"
-	"sync/atomic"
+
+	"github.com/sirupsen/logrus"
+	"go.uber.org/atomic"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/peer"
+	"google.golang.org/grpc/status"
+
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/engine"
+	gameserverpb "github.com/c4t-but-s4d/ctfcup-2023-igra/proto/go/gameserver"
 )
 
-func New(factory func() (*engine.Engine, error)) *GameServer {
-	return &GameServer{factory: factory}
+func New(game *Game, factory engine.Factory) *GameServer {
+	return &GameServer{
+		factory:    factory,
+		game:       game,
+		numStreams: atomic.NewInt64(0),
+	}
 }
 
 type GameServer struct {
-	factory func() (*engine.Engine, error)
-	gameserverpb.UnimplementedGameServerServer
-	numStreams atomic.Int64
+	gameserverpb.UnimplementedGameServerServiceServer
+
+	factory    engine.Factory
+	numStreams *atomic.Int64
+	game       *Game
 }
 
-func (g *GameServer) Ping(ctx context.Context, request *gameserverpb.PingRequest) (*gameserverpb.PingResponse, error) {
+func (g *GameServer) Ping(context.Context, *gameserverpb.PingRequest) (*gameserverpb.PingResponse, error) {
 	return &gameserverpb.PingResponse{}, nil
 }
 
-func (g *GameServer) ProcessEvent(stream gameserverpb.GameServer_ProcessEventServer) error {
-	defer g.numStreams.Add(-1)
-	if g.numStreams.Add(1) > 1 {
-		return errors.New("only one game session is allowed per client")
+func (g *GameServer) ProcessEvent(stream gameserverpb.GameServerService_ProcessEventServer) error {
+	defer g.numStreams.Dec()
+	if g.numStreams.Inc() > 1 {
+		return status.Error(codes.ResourceExhausted, "only one client connection allowed")
 	}
+
+	p, _ := peer.FromContext(stream.Context())
+	if p == nil {
+		return status.Error(codes.FailedPrecondition, "failed to get peer info")
+	}
+	logrus.Infof("new connection from %v", p.Addr)
 
 	eng, err := g.factory()
 	if err != nil {
-		return fmt.Errorf("creating engine: %w", err)
+		return status.Errorf(codes.Internal, "creating engine: %v", err)
 	}
+	g.game.engine.Store(eng)
+	g.game.events = make(chan *gameserverpb.ClientEvent)
+
+	defer func() {
+		g.game.engine.Store(nil)
+		close(g.game.events)
+	}()
 
 	for {
-		in, err := stream.Recv()
+		req, err := stream.Recv()
 		if errors.Is(err, io.EOF) {
+			logrus.Info("client disconnected")
 			return nil
 		}
-
 		if err != nil {
-			return fmt.Errorf("failed to read from stream: %w", err)
+			return status.Errorf(codes.Internal, "failed to read from stream: %v", err)
 		}
+		logrus.Debugf("received event: %v", req)
 
-		if !g.isValidChecksum(in) {
-			return fmt.Errorf("invalid checksum")
+		if req.Event == nil {
+			return status.Error(codes.InvalidArgument, "event is nil")
 		}
-
-		inp := input.FromProtoEvent(in.Event)
-		fmt.Printf("input: %+v\n", inp)
-		if err := eng.Update(inp); err != nil {
-			return fmt.Errorf("updating engine state: %w", err)
+		if err := eng.ValidateChecksum(req.Checksum); err != nil {
+			return status.Errorf(codes.InvalidArgument, "invalid checksum: %v", err)
 		}
-
-		//out := &gameserverpb.ServerEvent{}
-		//if err := stream.Send(out); err != nil {
-		//	return fmt.Errorf("failed to send : %w", err)
-		//}
+		g.game.events <- req.Event
 	}
-}
-
-func (g *GameServer) isValidChecksum(request *gameserverpb.ClientEventRequest) bool {
-	// TODO(jnovikov): Implement checksum validation.
-	return true
 }

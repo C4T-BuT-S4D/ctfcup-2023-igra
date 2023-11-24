@@ -18,55 +18,55 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
-// GameServerClient is the client API for GameServer service.
+// GameServerServiceClient is the client API for GameServerService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type GameServerClient interface {
+type GameServerServiceClient interface {
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
-	ProcessEvent(ctx context.Context, opts ...grpc.CallOption) (GameServer_ProcessEventClient, error)
+	ProcessEvent(ctx context.Context, opts ...grpc.CallOption) (GameServerService_ProcessEventClient, error)
 }
 
-type gameServerClient struct {
+type gameServerServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewGameServerClient(cc grpc.ClientConnInterface) GameServerClient {
-	return &gameServerClient{cc}
+func NewGameServerServiceClient(cc grpc.ClientConnInterface) GameServerServiceClient {
+	return &gameServerServiceClient{cc}
 }
 
-func (c *gameServerClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
+func (c *gameServerServiceClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
 	out := new(PingResponse)
-	err := c.cc.Invoke(ctx, "/gameserver.GameServer/Ping", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/gameserver.GameServerService/Ping", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *gameServerClient) ProcessEvent(ctx context.Context, opts ...grpc.CallOption) (GameServer_ProcessEventClient, error) {
-	stream, err := c.cc.NewStream(ctx, &GameServer_ServiceDesc.Streams[0], "/gameserver.GameServer/ProcessEvent", opts...)
+func (c *gameServerServiceClient) ProcessEvent(ctx context.Context, opts ...grpc.CallOption) (GameServerService_ProcessEventClient, error) {
+	stream, err := c.cc.NewStream(ctx, &GameServerService_ServiceDesc.Streams[0], "/gameserver.GameServerService/ProcessEvent", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &gameServerProcessEventClient{stream}
+	x := &gameServerServiceProcessEventClient{stream}
 	return x, nil
 }
 
-type GameServer_ProcessEventClient interface {
+type GameServerService_ProcessEventClient interface {
 	Send(*ClientEventRequest) error
 	Recv() (*ServerEvent, error)
 	grpc.ClientStream
 }
 
-type gameServerProcessEventClient struct {
+type gameServerServiceProcessEventClient struct {
 	grpc.ClientStream
 }
 
-func (x *gameServerProcessEventClient) Send(m *ClientEventRequest) error {
+func (x *gameServerServiceProcessEventClient) Send(m *ClientEventRequest) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *gameServerProcessEventClient) Recv() (*ServerEvent, error) {
+func (x *gameServerServiceProcessEventClient) Recv() (*ServerEvent, error) {
 	m := new(ServerEvent)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -74,75 +74,75 @@ func (x *gameServerProcessEventClient) Recv() (*ServerEvent, error) {
 	return m, nil
 }
 
-// GameServerServer is the server API for GameServer service.
-// All implementations must embed UnimplementedGameServerServer
+// GameServerServiceServer is the server API for GameServerService service.
+// All implementations must embed UnimplementedGameServerServiceServer
 // for forward compatibility
-type GameServerServer interface {
+type GameServerServiceServer interface {
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
-	ProcessEvent(GameServer_ProcessEventServer) error
-	mustEmbedUnimplementedGameServerServer()
+	ProcessEvent(GameServerService_ProcessEventServer) error
+	mustEmbedUnimplementedGameServerServiceServer()
 }
 
-// UnimplementedGameServerServer must be embedded to have forward compatible implementations.
-type UnimplementedGameServerServer struct {
+// UnimplementedGameServerServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedGameServerServiceServer struct {
 }
 
-func (UnimplementedGameServerServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
+func (UnimplementedGameServerServiceServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
-func (UnimplementedGameServerServer) ProcessEvent(GameServer_ProcessEventServer) error {
+func (UnimplementedGameServerServiceServer) ProcessEvent(GameServerService_ProcessEventServer) error {
 	return status.Errorf(codes.Unimplemented, "method ProcessEvent not implemented")
 }
-func (UnimplementedGameServerServer) mustEmbedUnimplementedGameServerServer() {}
+func (UnimplementedGameServerServiceServer) mustEmbedUnimplementedGameServerServiceServer() {}
 
-// UnsafeGameServerServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to GameServerServer will
+// UnsafeGameServerServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to GameServerServiceServer will
 // result in compilation errors.
-type UnsafeGameServerServer interface {
-	mustEmbedUnimplementedGameServerServer()
+type UnsafeGameServerServiceServer interface {
+	mustEmbedUnimplementedGameServerServiceServer()
 }
 
-func RegisterGameServerServer(s grpc.ServiceRegistrar, srv GameServerServer) {
-	s.RegisterService(&GameServer_ServiceDesc, srv)
+func RegisterGameServerServiceServer(s grpc.ServiceRegistrar, srv GameServerServiceServer) {
+	s.RegisterService(&GameServerService_ServiceDesc, srv)
 }
 
-func _GameServer_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _GameServerService_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PingRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(GameServerServer).Ping(ctx, in)
+		return srv.(GameServerServiceServer).Ping(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/gameserver.GameServer/Ping",
+		FullMethod: "/gameserver.GameServerService/Ping",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GameServerServer).Ping(ctx, req.(*PingRequest))
+		return srv.(GameServerServiceServer).Ping(ctx, req.(*PingRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _GameServer_ProcessEvent_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(GameServerServer).ProcessEvent(&gameServerProcessEventServer{stream})
+func _GameServerService_ProcessEvent_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(GameServerServiceServer).ProcessEvent(&gameServerServiceProcessEventServer{stream})
 }
 
-type GameServer_ProcessEventServer interface {
+type GameServerService_ProcessEventServer interface {
 	Send(*ServerEvent) error
 	Recv() (*ClientEventRequest, error)
 	grpc.ServerStream
 }
 
-type gameServerProcessEventServer struct {
+type gameServerServiceProcessEventServer struct {
 	grpc.ServerStream
 }
 
-func (x *gameServerProcessEventServer) Send(m *ServerEvent) error {
+func (x *gameServerServiceProcessEventServer) Send(m *ServerEvent) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *gameServerProcessEventServer) Recv() (*ClientEventRequest, error) {
+func (x *gameServerServiceProcessEventServer) Recv() (*ClientEventRequest, error) {
 	m := new(ClientEventRequest)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -150,22 +150,22 @@ func (x *gameServerProcessEventServer) Recv() (*ClientEventRequest, error) {
 	return m, nil
 }
 
-// GameServer_ServiceDesc is the grpc.ServiceDesc for GameServer service.
+// GameServerService_ServiceDesc is the grpc.ServiceDesc for GameServerService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var GameServer_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "gameserver.GameServer",
-	HandlerType: (*GameServerServer)(nil),
+var GameServerService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "gameserver.GameServerService",
+	HandlerType: (*GameServerServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "Ping",
-			Handler:    _GameServer_Ping_Handler,
+			Handler:    _GameServerService_Ping_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "ProcessEvent",
-			Handler:       _GameServer_ProcessEvent_Handler,
+			Handler:       _GameServerService_ProcessEvent_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},

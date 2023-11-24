@@ -1,10 +1,6 @@
 package object
 
-import (
-	"log"
-
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/geometry"
-)
+import "github.com/c4t-but-s4d/ctfcup-2023-igra/internal/geometry"
 
 type Type int
 
@@ -19,10 +15,9 @@ func (t Type) String() string {
 		return "StaticTileType"
 	case PlayerType:
 		return "PlayerType"
+	default:
+		panic("unknown type")
 	}
-
-	log.Fatalf("unhandled object type: %d", t)
-	return ""
 }
 
 type Object struct {

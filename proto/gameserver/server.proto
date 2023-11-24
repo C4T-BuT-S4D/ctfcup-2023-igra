@@ -11,13 +11,11 @@ message PingResponse {
 
 message ClientEvent {
   message KeysPressed {
-    bool WPressed = 1;
-    bool APressed = 2;
-    bool SPressed = 3;
-    bool DPressed = 4;
+    repeated int32 keys_pressed = 1;
+    repeated int32 new_keys_pressed = 2;
   }
 
-  KeysPressed keysPressed = 1;
+  KeysPressed keys_pressed = 1;
 }
 
 message ClientEventRequest {
@@ -29,7 +27,7 @@ message ServerEvent {
 
 }
 
-service GameServer {
+service GameServerService {
   rpc Ping(PingRequest) returns (PingResponse);
   rpc ProcessEvent(stream ClientEventRequest) returns (stream ServerEvent);
 }

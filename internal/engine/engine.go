@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"image"
-	"log"
 
 	"github.com/Rulox/ebitmx"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -18,8 +17,11 @@ import (
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/resources"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/tiles"
 
+	// Register png codec.
 	_ "image/png"
 )
+
+type Factory func() (*Engine, error)
 
 type Engine struct {
 	Tiles  []*tiles.StaticTile
@@ -57,33 +59,31 @@ func getTileImgByID(tileID tmx.ID, tileSet *ebitmx.EbitenTileset, img *ebiten.Im
 
 func New() (*Engine, error) {
 	var resultImage *ebiten.Image
-	{
-		imgFile, err := resources.EmbeddedFS.Open("tiles/result.png")
-		if err != nil {
-			log.Fatalf("Failed to open tileset: %v", err)
-		}
-
-		img, _, err := image.Decode(imgFile)
-		if err != nil {
-			log.Fatalf("Failed to decode image: %v", err)
-		}
-
-		resultImage = ebiten.NewImageFromImage(img)
+	imgFile, err := resources.EmbeddedFS.Open("tiles/result.png")
+	if err != nil {
+		return nil, fmt.Errorf("failed to open tileset: %w", err)
 	}
+
+	img, _, err := image.Decode(imgFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode tileset: %w", err)
+	}
+
+	resultImage = ebiten.NewImageFromImage(img)
 
 	mapFile, err := resources.EmbeddedFS.Open("tiles/test.tmx")
 	if err != nil {
-		log.Fatalf("Failed to open map file: %v", err)
+		return nil, fmt.Errorf("failed to open map: %w", err)
 	}
 
 	testMap, err := tmx.Read(mapFile)
 	if err != nil {
-		log.Fatalf("Failed to load map: %v", err)
+		return nil, fmt.Errorf("failed to decode map: %w", err)
 	}
 
 	iceTiles, err := ebitmx.GetTilesetFromFS(resources.EmbeddedFS, "tiles/ice.tsx")
 	if err != nil {
-		log.Fatalf("Failed to load tiles: %v", err)
+		return nil, fmt.Errorf("failed to get tileset: %w", err)
 	}
 
 	var mapTiles []*tiles.StaticTile
@@ -96,10 +96,18 @@ func New() (*Engine, error) {
 					continue
 				}
 
-				mapTiles = append(mapTiles, tiles.NewStaticTile(&geometry.Point{
-					X: float64(x * testMap.TileWidth),
-					Y: float64(y * testMap.TileHeight),
-				}, testMap.TileWidth, testMap.TileHeight, getTileImgByID(dt.ID, iceTiles, resultImage)))
+				mapTiles = append(
+					mapTiles,
+					tiles.NewStaticTile(
+						&geometry.Point{
+							X: float64(x * testMap.TileWidth),
+							Y: float64(y * testMap.TileHeight),
+						},
+						testMap.TileWidth,
+						testMap.TileHeight,
+						getTileImgByID(dt.ID, iceTiles, resultImage),
+					),
+				)
 			}
 		}
 	}
@@ -152,14 +160,14 @@ func (e *Engine) ProcessPlayerInput(inp *input.Input) {
 		e.Player.Acceleration.Y = physics.GravityAcceleration
 	}
 
-	if inp.WPressed {
-		e.Player.Speed.Y = -3
+	if inp.IsKeyNewlyPressed(ebiten.KeySpace) && e.Player.OnGround {
+		e.Player.Speed.Y = -15
 	}
 
 	switch {
-	case inp.APressed:
+	case inp.IsKeyPressed(ebiten.KeyA):
 		e.Player.Speed.X = -2
-	case inp.DPressed:
+	case inp.IsKeyPressed(ebiten.KeyD):
 		e.Player.Speed.X = 2
 	default:
 		e.Player.Speed.X = 0
@@ -212,4 +220,9 @@ func (e *Engine) AlignPlayerY() {
 	} else {
 		e.Player.Speed.Y = 0
 	}
+}
+
+func (e *Engine) ValidateChecksum(_ string) error {
+	// FIXME: Implement.
+	return nil
 }

@@ -14,6 +14,10 @@ require (
 	github.com/ebitengine/purego v0.5.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/jezek/xgb v1.1.0 // indirect
+	github.com/samber/lo v1.38.1 // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
+	go.uber.org/atomic v1.11.0 // indirect
+	golang.org/x/exp v0.0.0-20220303212507-bbda1eaf7a17 // indirect
 	golang.org/x/exp/shiny v0.0.0-20230817173708-d852ddb80c63 // indirect
 	golang.org/x/image v0.12.0 // indirect
 	golang.org/x/mobile v0.0.0-20230922142353-e2f452493d57 // indirect

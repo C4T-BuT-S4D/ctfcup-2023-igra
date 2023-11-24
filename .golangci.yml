@@ -47,14 +47,13 @@ linters-settings:
       - fmt.Errorf(
       - errors.New(
       - WrapErrorf
+      - status.Errorf(
+      - status.Error(
 
 issues:
   exclude-use-default: false
   max-same-issues: 0
   exclude-rules:
-    - source: "status\\.Errorf"
-      linters:
-        - wrapcheck
     - linters:
         - revive
       text: "package-comments:"
