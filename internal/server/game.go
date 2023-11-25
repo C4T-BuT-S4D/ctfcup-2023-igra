@@ -2,10 +2,12 @@ package server
 
 import (
 	"fmt"
+	"image/color"
+	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/sirupsen/logrus"
-	"go.uber.org/atomic"
 
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/engine"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/input"
@@ -13,39 +15,59 @@ import (
 )
 
 type Game struct {
-	engine *atomic.Pointer[engine.Engine]
-	events chan *gameserverpb.ClientEvent
+	engine *engine.Engine
+
+	lock sync.Mutex
 }
 
 func NewGame() *Game {
-	return &Game{
-		engine: atomic.NewPointer[engine.Engine](nil),
-	}
+	return &Game{}
 }
 
-func (g *Game) Update() error {
-	eng := g.engine.Load()
-	if eng == nil {
+func (g *Game) processEvent(event *gameserverpb.ClientEvent) error {
+	g.lock.Lock()
+	defer g.lock.Unlock()
+
+	if g.engine == nil {
 		return nil
 	}
 
-	event, ok := <-g.events
-	logrus.Debugf("new update from client: %v, ok: %v", event, ok)
-	if !ok {
-		return nil
-	}
+	logrus.Debugf("new update from client: %v", event)
 	inp := input.NewFromProto(event.KeysPressed)
-
-	if err := eng.Update(inp); err != nil {
+	if err := g.engine.Update(inp); err != nil {
 		return fmt.Errorf("updating engine state: %w", err)
 	}
 
 	return nil
 }
 
+func (g *Game) setEngine(eng *engine.Engine) {
+	g.lock.Lock()
+	defer g.lock.Unlock()
+	g.engine = eng
+}
+
+func (g *Game) resetEngine() {
+	g.lock.Lock()
+	defer g.lock.Unlock()
+	g.engine = nil
+}
+
+// Update doesn't do anything, because the game state is updated by the server.
+func (g *Game) Update() error {
+	return nil
+}
+
 func (g *Game) Draw(screen *ebiten.Image) {
-	if eng := g.engine.Load(); eng != nil {
-		eng.Draw(screen)
+	if g.engine != nil {
+		g.engine.Draw(screen)
+	} else {
+		// Draw a "client disconnected" text over all screen.
+		img := ebiten.NewImageFromImage(screen)
+		img.Fill(color.RGBA{0x80, 0x80, 0x80, 0xff})
+		text := "Client disconnected"
+		ebitenutil.DebugPrintAt(img, text, 0, 0)
+		screen.DrawImage(img, nil)
 	}
 }
 

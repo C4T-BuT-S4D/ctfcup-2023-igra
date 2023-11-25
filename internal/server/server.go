@@ -51,13 +51,9 @@ func (g *GameServer) ProcessEvent(stream gameserverpb.GameServerService_ProcessE
 	if err != nil {
 		return status.Errorf(codes.Internal, "creating engine: %v", err)
 	}
-	g.game.engine.Store(eng)
-	g.game.events = make(chan *gameserverpb.ClientEvent)
 
-	defer func() {
-		g.game.engine.Store(nil)
-		close(g.game.events)
-	}()
+	g.game.setEngine(eng)
+	defer g.game.resetEngine()
 
 	for {
 		req, err := stream.Recv()
@@ -76,6 +72,8 @@ func (g *GameServer) ProcessEvent(stream gameserverpb.GameServerService_ProcessE
 		if err := eng.ValidateChecksum(req.Checksum); err != nil {
 			return status.Errorf(codes.InvalidArgument, "invalid checksum: %v", err)
 		}
-		g.game.events <- req.Event
+		if err := g.game.processEvent(req.Event); err != nil {
+			return status.Errorf(codes.Internal, "processing event: %v", err)
+		}
 	}
 }
