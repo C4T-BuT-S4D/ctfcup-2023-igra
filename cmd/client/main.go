@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -26,6 +27,7 @@ func NewGame(ctx context.Context, client gameserverpb.GameServerServiceClient) (
 
 	g := &Game{
 		Engine: e,
+		ctx:    ctx,
 
 		recvErrChan:     make(chan error, 1),
 		serverEventChan: make(chan *gameserverpb.ServerEvent),
@@ -54,12 +56,17 @@ func NewGame(ctx context.Context, client gameserverpb.GameServerServiceClient) (
 type Game struct {
 	Engine *engine.Engine
 	stream gameserverpb.GameServerService_ProcessEventClient
+	ctx    context.Context
 
 	serverEventChan chan *gameserverpb.ServerEvent
 	recvErrChan     chan error
 }
 
 func (g *Game) Update() error {
+	if err := g.ctx.Err(); err != nil {
+		return err
+	}
+
 	inp := input.New()
 	inp.Update()
 
@@ -123,7 +130,7 @@ func main() {
 	ebiten.SetWindowTitle("ctfcup-2023-igra client")
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
-	if err := ebiten.RunGame(g); err != nil {
+	if err := ebiten.RunGame(g); err != nil && !errors.Is(err, context.Canceled) {
 		logrus.Fatalf("Failed to run game: %v", err)
 	}
 }

@@ -10,3 +10,53 @@ type Rectangle struct {
 func (a *Rectangle) Intersects(b *Rectangle) bool {
 	return !(a.RightX <= b.LeftX || b.RightX <= a.LeftX || a.BottomY <= b.TopY || b.BottomY <= a.TopY)
 }
+
+func (a *Rectangle) PushVectorX(b *Rectangle) *Vector {
+	if !a.Intersects(b) {
+		return &Vector{}
+	}
+
+	var vecs []*Vector
+
+	if b.RightX > a.LeftX {
+		vecs = append(vecs, &Vector{X: a.LeftX - b.RightX, Y: 0})
+	}
+
+	if b.LeftX < a.RightX {
+		vecs = append(vecs, &Vector{X: a.RightX - b.LeftX, Y: 0})
+	}
+
+	v := vecs[0]
+	for _, nv := range vecs {
+		if nv.LengthSquared() < v.LengthSquared() {
+			v = nv
+		}
+	}
+
+	return v
+}
+
+func (a *Rectangle) PushVectorY(b *Rectangle) *Vector {
+	if !a.Intersects(b) {
+		return &Vector{}
+	}
+
+	var vecs []*Vector
+
+	if b.BottomY > a.TopY {
+		vecs = append(vecs, &Vector{X: 0, Y: a.TopY - b.BottomY})
+	}
+
+	if b.TopY < a.BottomY {
+		vecs = append(vecs, &Vector{X: 0, Y: a.BottomY - b.TopY})
+	}
+
+	v := vecs[0]
+	for _, nv := range vecs {
+		if nv.LengthSquared() < v.LengthSquared() {
+			v = nv
+		}
+	}
+
+	return v
+}

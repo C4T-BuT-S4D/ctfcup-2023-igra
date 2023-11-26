@@ -160,15 +160,15 @@ func (e *Engine) ProcessPlayerInput(inp *input.Input) {
 		e.Player.Acceleration.Y = physics.GravityAcceleration
 	}
 
-	if inp.IsKeyNewlyPressed(ebiten.KeySpace) && e.Player.OnGround {
-		e.Player.Speed.Y = -15
+	if (inp.IsKeyPressed(ebiten.KeySpace) || inp.IsKeyPressed(ebiten.KeyW)) && e.Player.OnGround {
+		e.Player.Speed.Y = -5
 	}
 
 	switch {
 	case inp.IsKeyPressed(ebiten.KeyA):
-		e.Player.Speed.X = -2
+		e.Player.Speed.X = -2.5
 	case inp.IsKeyPressed(ebiten.KeyD):
-		e.Player.Speed.X = 2
+		e.Player.Speed.X = 2.5
 	default:
 		e.Player.Speed.X = 0
 	}
@@ -184,7 +184,7 @@ func (e *Engine) AlignPlayerX() {
 			continue
 		}
 
-		pv = e.PushVectorX(c.Rectangle(), e.Player.Rectangle())
+		pv = c.Rectangle().PushVectorX(e.Player.Rectangle())
 		break
 	}
 
@@ -203,7 +203,7 @@ func (e *Engine) AlignPlayerY() {
 			continue
 		}
 
-		pv = e.PushVectorY(c.Rectangle(), e.Player.Rectangle())
+		pv = c.Rectangle().PushVectorY(e.Player.Rectangle())
 		break
 	}
 
