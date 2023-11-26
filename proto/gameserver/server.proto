@@ -27,7 +27,24 @@ message ServerEvent {
 
 }
 
+message InventoryRequest {
+}
+
+message Inventory {
+  message Item {
+    string name = 1;
+    bool important = 2;
+  }
+
+  repeated Item items = 1;
+}
+
+message InventoryResponse {
+  Inventory inventory = 1;
+}
+
 service GameServerService {
   rpc Ping(PingRequest) returns (PingResponse);
   rpc ProcessEvent(stream ClientEventRequest) returns (stream ServerEvent);
+  rpc GetInventory(InventoryRequest) returns (InventoryResponse);
 }

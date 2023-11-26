@@ -77,3 +77,12 @@ func (g *GameServer) ProcessEvent(stream gameserverpb.GameServerService_ProcessE
 		}
 	}
 }
+
+func (g *GameServer) GetInventory(context.Context, *gameserverpb.InventoryRequest) (*gameserverpb.InventoryResponse, error) {
+	eng := g.game.getEngine()
+	if eng == nil {
+		return &gameserverpb.InventoryResponse{Inventory: &gameserverpb.Inventory{}}, nil
+	}
+
+	return &gameserverpb.InventoryResponse{Inventory: eng.Player.Inventory.ToProto()}, nil
+}

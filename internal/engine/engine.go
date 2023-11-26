@@ -11,6 +11,7 @@ import (
 
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/geometry"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/input"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/item"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/object"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/physics"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/player"
@@ -26,6 +27,15 @@ type Factory func() (*Engine, error)
 type Engine struct {
 	Tiles  []*tiles.StaticTile
 	Player *player.Player
+	Items  []*item.Item
+}
+
+func getProperties(o *tmx.Object) map[string]string {
+	properties := make(map[string]string)
+	for _, p := range o.Properties {
+		properties[p.Name] = p.Value
+	}
+	return properties
 }
 
 var ErrNoPlayerSpawn = errors.New("no player spawn found")
@@ -33,13 +43,11 @@ var ErrNoPlayerSpawn = errors.New("no player spawn found")
 func findPlayerSpawn(tileMap *tmx.Map) (*geometry.Point, error) {
 	for _, og := range tileMap.ObjectGroups {
 		for _, o := range og.Objects {
-			for _, p := range o.Properties {
-				if p.Name == "type" && p.Value == "player_spawn" {
-					return &geometry.Point{
-						X: o.X,
-						Y: o.Y,
-					}, nil
-				}
+			if getProperties(&o)["type"] == "player_spawn" {
+				return &geometry.Point{
+					X: o.X,
+					Y: o.Y,
+				}, nil
 			}
 		}
 	}
@@ -119,9 +127,24 @@ func New() (*Engine, error) {
 
 	p := player.New(playerPos)
 
+	var items []*item.Item
+
+	for _, og := range testMap.ObjectGroups {
+		for _, o := range og.Objects {
+			props := getProperties(&o)
+			if props["type"] == "item" {
+				items = append(items, item.New(&geometry.Point{
+					X: o.X,
+					Y: o.Y,
+				}, int(o.Width), int(o.Height), props["name"], false))
+			}
+		}
+	}
+
 	return &Engine{
 		Tiles:  mapTiles,
 		Player: p,
+		Items:  items,
 	}, nil
 }
 
@@ -133,6 +156,18 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 			t.Rectangle().TopY,
 		)
 		screen.DrawImage(t.Image, op)
+	}
+
+	for _, it := range e.Items {
+		if it.Collected {
+			continue
+		}
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Translate(
+			it.Rectangle().LeftX,
+			it.Rectangle().TopY,
+		)
+		screen.DrawImage(it.Image, op)
 	}
 
 	op := &ebiten.DrawImageOptions{}
@@ -149,6 +184,7 @@ func (e *Engine) Update(inp *input.Input) error {
 	e.AlignPlayerX()
 	e.Player.Move(&geometry.Vector{X: 0, Y: e.Player.Speed.Y})
 	e.AlignPlayerY()
+	e.CollectItems()
 
 	return nil
 }
@@ -180,7 +216,7 @@ func (e *Engine) AlignPlayerX() {
 	var pv *geometry.Vector
 
 	for _, c := range e.Collisions(e.Player.Rectangle()) {
-		if c.Type() == object.PlayerType {
+		if c.Type() != object.StaticTileType {
 			continue
 		}
 
@@ -199,7 +235,7 @@ func (e *Engine) AlignPlayerY() {
 	var pv *geometry.Vector
 
 	for _, c := range e.Collisions(e.Player.Rectangle()) {
-		if c.Type() == object.PlayerType {
+		if c.Type() != object.StaticTileType {
 			continue
 		}
 
@@ -219,6 +255,21 @@ func (e *Engine) AlignPlayerY() {
 		e.Player.OnGround = true
 	} else {
 		e.Player.Speed.Y = 0
+	}
+}
+
+func (e *Engine) CollectItems() {
+	for _, c := range e.Collisions(e.Player.Rectangle()) {
+		if c.Type() != object.Item {
+			continue
+		}
+
+		it := c.(*item.Item)
+		if it.Collected {
+			continue
+		}
+
+		e.Player.Collect(it)
 	}
 }
 

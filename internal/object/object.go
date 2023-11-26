@@ -7,6 +7,7 @@ type Type int
 const (
 	StaticTileType Type = iota
 	PlayerType
+	Item
 )
 
 func (t Type) String() string {
@@ -15,6 +16,8 @@ func (t Type) String() string {
 		return "StaticTileType"
 	case PlayerType:
 		return "PlayerType"
+	case Item:
+		return "Item"
 	default:
 		panic("unknown type")
 	}

@@ -47,6 +47,12 @@ func (g *Game) setEngine(eng *engine.Engine) {
 	g.engine = eng
 }
 
+func (g *Game) getEngine() *engine.Engine {
+	g.lock.Lock()
+	defer g.lock.Unlock()
+	return g.engine
+}
+
 func (g *Game) resetEngine() {
 	g.lock.Lock()
 	defer g.lock.Unlock()

@@ -24,6 +24,6 @@ func NewStaticTile(origin *geometry.Point, width, height int, image *ebiten.Imag
 	}
 }
 
-func (s StaticTile) Type() object.Type {
+func (s *StaticTile) Type() object.Type {
 	return object.StaticTileType
 }

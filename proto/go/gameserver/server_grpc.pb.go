@@ -8,6 +8,7 @@ package gameserver
 
 import (
 	context "context"
+
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -24,6 +25,7 @@ const _ = grpc.SupportPackageIsVersion7
 type GameServerServiceClient interface {
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 	ProcessEvent(ctx context.Context, opts ...grpc.CallOption) (GameServerService_ProcessEventClient, error)
+	GetInventory(ctx context.Context, in *InventoryRequest, opts ...grpc.CallOption) (*InventoryResponse, error)
 }
 
 type gameServerServiceClient struct {
@@ -74,12 +76,22 @@ func (x *gameServerServiceProcessEventClient) Recv() (*ServerEvent, error) {
 	return m, nil
 }
 
+func (c *gameServerServiceClient) GetInventory(ctx context.Context, in *InventoryRequest, opts ...grpc.CallOption) (*InventoryResponse, error) {
+	out := new(InventoryResponse)
+	err := c.cc.Invoke(ctx, "/gameserver.GameServerService/GetInventory", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GameServerServiceServer is the server API for GameServerService service.
 // All implementations must embed UnimplementedGameServerServiceServer
 // for forward compatibility
 type GameServerServiceServer interface {
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	ProcessEvent(GameServerService_ProcessEventServer) error
+	GetInventory(context.Context, *InventoryRequest) (*InventoryResponse, error)
 	mustEmbedUnimplementedGameServerServiceServer()
 }
 
@@ -92,6 +104,9 @@ func (UnimplementedGameServerServiceServer) Ping(context.Context, *PingRequest) 
 }
 func (UnimplementedGameServerServiceServer) ProcessEvent(GameServerService_ProcessEventServer) error {
 	return status.Errorf(codes.Unimplemented, "method ProcessEvent not implemented")
+}
+func (UnimplementedGameServerServiceServer) GetInventory(context.Context, *InventoryRequest) (*InventoryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetInventory not implemented")
 }
 func (UnimplementedGameServerServiceServer) mustEmbedUnimplementedGameServerServiceServer() {}
 
@@ -150,6 +165,24 @@ func (x *gameServerServiceProcessEventServer) Recv() (*ClientEventRequest, error
 	return m, nil
 }
 
+func _GameServerService_GetInventory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InventoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GameServerServiceServer).GetInventory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/gameserver.GameServerService/GetInventory",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GameServerServiceServer).GetInventory(ctx, req.(*InventoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // GameServerService_ServiceDesc is the grpc.ServiceDesc for GameServerService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -160,6 +193,10 @@ var GameServerService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Ping",
 			Handler:    _GameServerService_Ping_Handler,
+		},
+		{
+			MethodName: "GetInventory",
+			Handler:    _GameServerService_GetInventory_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
