@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"net"
+	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/sirupsen/logrus"
@@ -14,11 +16,34 @@ import (
 	gameserverpb "github.com/c4t-but-s4d/ctfcup-2023-igra/proto/go/gameserver"
 )
 
+type Config struct {
+	SignKey string `json:"sign_key"`
+}
+
 func main() {
 	logging.Init()
 
+	// TODO: use flags library
+
+	cfgPath := "configs/server.json"
+	if len(os.Args) > 1 {
+		cfgPath = os.Args[1]
+	}
+
+	cfgFile, err := os.Open(cfgPath)
+	if err != nil {
+		logrus.Fatalf("opening config file %s: %v", cfgPath, err)
+	}
+
+	var cfg Config
+	if err := json.NewDecoder(cfgFile).Decode(&cfg); err != nil {
+		logrus.Fatalf("decoding config: %v", err)
+	}
+
 	game := server.NewGame()
-	gs := server.New(game, engine.New)
+	gs := server.New(game, func() (*engine.Engine, error) {
+		return engine.New([]byte(cfg.SignKey))
+	})
 
 	s := grpc.NewServer()
 	gameserverpb.RegisterGameServerServiceServer(s, gs)

@@ -6,7 +6,7 @@ import (
 )
 
 type Inventory struct {
-	Items []*item.Item
+	Items []*item.Item `json:"items"`
 }
 
 func (inv *Inventory) ToProto() *gameserverpb.Inventory {

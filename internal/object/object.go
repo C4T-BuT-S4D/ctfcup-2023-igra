@@ -24,8 +24,9 @@ func (t Type) String() string {
 }
 
 type Object struct {
-	Origin        *geometry.Point
-	Width, Height float64
+	Origin *geometry.Point `json:"origin"`
+	Width  float64         `json:"width"`
+	Height float64         `json:"height"`
 }
 
 func (o *Object) Rectangle() *geometry.Rectangle {

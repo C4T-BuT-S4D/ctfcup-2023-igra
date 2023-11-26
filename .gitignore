@@ -1,3 +1,6 @@
 .idea
 .vscode
 .DS_Store
+/snapshots/*
+!/snapshots/.keep
+/configs/server.json

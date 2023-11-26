@@ -1,6 +1,10 @@
 package engine
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"image"
@@ -25,9 +29,10 @@ import (
 type Factory func() (*Engine, error)
 
 type Engine struct {
-	Tiles  []*tiles.StaticTile
-	Player *player.Player
-	Items  []*item.Item
+	Tiles   []*tiles.StaticTile `json:"tiles"`
+	Player  *player.Player      `json:"player"`
+	Items   []*item.Item        `json:"items"`
+	signKey []byte              `json:"-"`
 }
 
 func getProperties(o *tmx.Object) map[string]string {
@@ -65,7 +70,7 @@ func getTileImgByID(tileID tmx.ID, tileSet *ebitmx.EbitenTileset, img *ebiten.Im
 	return img.SubImage(image.Rect(x0, y0, x1, y1)).(*ebiten.Image)
 }
 
-func New() (*Engine, error) {
+func New(signKey []byte) (*Engine, error) {
 	var resultImage *ebiten.Image
 	imgFile, err := resources.EmbeddedFS.Open("tiles/result.png")
 	if err != nil {
@@ -146,6 +151,53 @@ func New() (*Engine, error) {
 		Player: p,
 		Items:  items,
 	}, nil
+}
+
+var ErrIncorrectHmac = errors.New("incorrect snapshot hmac")
+
+func NewFromSnapshot(signKey []byte, snapshot *Snapshot) (*Engine, error) {
+	mac := hmac.New(sha256.New, signKey)
+	if _, err := mac.Write(snapshot.Data); err != nil {
+		return nil, fmt.Errorf("signing data: %w", err)
+	}
+
+	if !hmac.Equal(mac.Sum(nil), snapshot.Sign) {
+		return nil, ErrIncorrectHmac
+	}
+
+	return nil, nil
+}
+
+type Snapshot struct {
+	Data []byte
+	Sign []byte
+}
+
+func (e *Engine) MakeSnapshot() (*Snapshot, error) {
+	data, err := json.Marshal(e)
+	if err != nil {
+		return nil, fmt.Errorf("marshalling engine: %w", err)
+	}
+
+	mac := hmac.New(sha256.New, e.signKey)
+	if _, err := mac.Write(data); err != nil {
+		return nil, fmt.Errorf("signing data: %w", err)
+	}
+
+	return &Snapshot{
+		Data: data,
+		Sign: mac.Sum(nil),
+	}, nil
+}
+
+func (s *Snapshot) Resign(signKey []byte) error {
+	mac := hmac.New(sha256.New, signKey)
+	if _, err := mac.Write(s.Data); err != nil {
+		return fmt.Errorf("signing data: %w", err)
+	}
+
+	s.Sign = mac.Sum(nil)
+	return nil
 }
 
 func (e *Engine) Draw(screen *ebiten.Image) {
@@ -273,7 +325,27 @@ func (e *Engine) CollectItems() {
 	}
 }
 
-func (e *Engine) ValidateChecksum(_ string) error {
-	// FIXME: Implement.
+func (e *Engine) Checksum() (string, error) {
+	if snapshot, err := e.MakeSnapshot(); err != nil {
+		return "", fmt.Errorf("making snapshot: %w", err)
+	} else {
+		hash := sha256.New()
+		if _, err := hash.Write(snapshot.Data); err != nil {
+			return "", fmt.Errorf("hashing snapshot: %w", err)
+		}
+
+		return hex.EncodeToString(hash.Sum(snapshot.Data)), nil
+	}
+}
+
+var ErrInvalidChecksum = errors.New("invalid checksum")
+
+func (e *Engine) ValidateChecksum(checksum string) error {
+	if currentChecksum, err := e.Checksum(); err != nil {
+		return fmt.Errorf("getting correct checksum: %w", err)
+	} else if currentChecksum != checksum {
+		return ErrInvalidChecksum
+	}
+
 	return nil
 }

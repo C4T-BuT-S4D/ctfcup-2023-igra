@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -19,8 +20,12 @@ import (
 	gameserverpb "github.com/c4t-but-s4d/ctfcup-2023-igra/proto/go/gameserver"
 )
 
-func NewGame(ctx context.Context, client gameserverpb.GameServerServiceClient) (*Game, error) {
-	e, err := engine.New()
+type Config struct {
+	SignKey string `json:"sign_key"`
+}
+
+func NewGame(ctx context.Context, cfg *Config, client gameserverpb.GameServerServiceClient) (*Game, error) {
+	e, err := engine.New([]byte(cfg.SignKey))
 	if err != nil {
 		return nil, fmt.Errorf("initializing engine: %w", err)
 	}
@@ -76,8 +81,11 @@ func (g *Game) Update() error {
 	default:
 	}
 
-	// TODO(b1r1b1r1): Provide interface for checksum calculation.
-	checksum := ""
+	checksum, err := g.Engine.Checksum()
+	if err != nil {
+		return fmt.Errorf("calculating checksum: %w", err)
+	}
+
 	if g.stream != nil {
 		if err := g.stream.Send(&gameserverpb.ClientEventRequest{
 			Checksum: checksum,
@@ -105,9 +113,26 @@ func (g *Game) Layout(_, _ int) (screenWidth, screenHeight int) {
 func main() {
 	logging.Init()
 
-	serverHost := ""
+	// TODO: use flags library
+
+	cfgPath := "configs/client.json"
 	if len(os.Args) > 1 {
-		serverHost = os.Args[1]
+		cfgPath = os.Args[1]
+	}
+
+	serverHost := ""
+	if len(os.Args) > 2 {
+		serverHost = os.Args[2]
+	}
+
+	cfgFile, err := os.Open(cfgPath)
+	if err != nil {
+		logrus.Fatalf("opening config file %s: %v", cfgPath, err)
+	}
+
+	var cfg Config
+	if err := json.NewDecoder(cfgFile).Decode(&cfg); err != nil {
+		logrus.Fatalf("decoding config: %v", err)
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
@@ -122,7 +147,7 @@ func main() {
 		client = gameserverpb.NewGameServerServiceClient(conn)
 	}
 
-	g, err := NewGame(ctx, client)
+	g, err := NewGame(ctx, &cfg, client)
 	if err != nil {
 		logrus.Fatalf("Failed to create game: %v", err)
 	}

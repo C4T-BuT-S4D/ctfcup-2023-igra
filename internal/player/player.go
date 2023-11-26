@@ -14,11 +14,11 @@ import (
 type Player struct {
 	*physics.Object
 
-	Image *ebiten.Image
+	Image *ebiten.Image `json:"-"`
 
-	Inventory *Inventory
+	Inventory *Inventory `json:"inventory"`
 
-	OnGround bool
+	OnGround bool `json:"on_ground"`
 }
 
 func New(origin *geometry.Point) *Player {

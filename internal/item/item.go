@@ -12,16 +12,16 @@ import (
 type Item struct {
 	*object.Object
 
-	Image *ebiten.Image
+	Image *ebiten.Image `json:"-"`
 
-	Name      string
-	Important bool
-	Collected bool
+	Name      string `json:"name"`
+	Important bool   `json:"important"`
+	Collected bool   `json:"collected"`
 }
 
 func New(origin *geometry.Point, width, height int, name string, important bool) *Item {
 	img := ebiten.NewImage(width, height)
-	img.Fill(color.RGBA{R: 255, G: 0, B: 0, A: 255})
+	img.Fill(color.RGBA{R: 0xff, G: 0x00, B: 0x00, A: 0xff})
 
 	return &Item{
 		Object: &object.Object{

@@ -10,7 +10,7 @@ import (
 type StaticTile struct {
 	*object.Object
 
-	Image *ebiten.Image
+	Image *ebiten.Image `json:"-"`
 }
 
 func NewStaticTile(origin *geometry.Point, width, height int, image *ebiten.Image) *StaticTile {
