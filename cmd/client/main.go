@@ -21,7 +21,7 @@ import (
 
 var ErrNoStartSnapshot = errors.New("no start snapshot")
 
-func NewGame(ctx context.Context, client gameserverpb.GameServerServiceClient) (*Game, error) {
+func NewGame(ctx context.Context, client gameserverpb.GameServerServiceClient, level string) (*Game, error) {
 	g := &Game{
 		ctx: ctx,
 
@@ -29,6 +29,10 @@ func NewGame(ctx context.Context, client gameserverpb.GameServerServiceClient) (
 
 		recvErrChan:     make(chan error, 1),
 		serverEventChan: make(chan *gameserverpb.ServerEvent),
+	}
+
+	engineConfig := engine.Config{
+		Level: level,
 	}
 
 	if client != nil {
@@ -44,13 +48,13 @@ func NewGame(ctx context.Context, client gameserverpb.GameServerServiceClient) (
 		}
 
 		if snapshotProto := startSnapshotEvent.GetSnapshot(); snapshotProto.Data == nil {
-			e, err := engine.New("")
+			e, err := engine.New(engineConfig)
 			if err != nil {
 				return nil, fmt.Errorf("creating engine without snapshot: %w", err)
 			}
 			g.Engine = e
 		} else {
-			e, err := engine.NewFromSnapshot("", engine.NewSnapshotFromProto(snapshotProto))
+			e, err := engine.NewFromSnapshot(engineConfig, engine.NewSnapshotFromProto(snapshotProto))
 			if err != nil {
 				return nil, fmt.Errorf("creating engine from snapshot: %w", err)
 			}
@@ -67,7 +71,7 @@ func NewGame(ctx context.Context, client gameserverpb.GameServerServiceClient) (
 			g.serverEventChan <- serverEvent
 		}()
 	} else {
-		e, err := engine.New("")
+		e, err := engine.New(engineConfig)
 		if err != nil {
 			return nil, fmt.Errorf("initializing engine: %w", err)
 		}
@@ -135,6 +139,7 @@ func main() {
 
 	// TODO: bind to viper.
 	serverAddr := pflag.StringP("server", "s", "127.0.0.1:8080", "server address")
+	level := pflag.StringP("level", "l", "test", "level to load")
 	pflag.Parse()
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
@@ -149,7 +154,7 @@ func main() {
 		client = gameserverpb.NewGameServerServiceClient(conn)
 	}
 
-	g, err := NewGame(ctx, client)
+	g, err := NewGame(ctx, client, *level)
 	if err != nil {
 		logrus.Fatalf("Failed to create game: %v", err)
 	}

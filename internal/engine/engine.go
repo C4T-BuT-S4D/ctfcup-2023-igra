@@ -31,6 +31,11 @@ import (
 
 type Factory func() (*Engine, error)
 
+type Config struct {
+	SnapshotsDir string
+	Level        string
+}
+
 type Engine struct {
 	Tiles  []*tiles.StaticTile `json:"-"`
 	Player *player.Player      `json:"player"`
@@ -75,7 +80,7 @@ func getTileImgByID(tileID tmx.ID, tileSet *ebitmx.EbitenTileset, img *ebiten.Im
 	return img.SubImage(image.Rect(x0, y0, x1, y1)).(*ebiten.Image)
 }
 
-func New(snapshotsDir string) (*Engine, error) {
+func New(config Config) (*Engine, error) {
 	var resultImage *ebiten.Image
 	imgFile, err := resources.EmbeddedFS.Open("tiles/result.png")
 	if err != nil {
@@ -89,7 +94,7 @@ func New(snapshotsDir string) (*Engine, error) {
 
 	resultImage = ebiten.NewImageFromImage(img)
 
-	mapFile, err := resources.EmbeddedFS.Open("tiles/test.tmx")
+	mapFile, err := resources.EmbeddedFS.Open(fmt.Sprintf("tiles/%s.tmx", config.Level))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open map: %w", err)
 	}
@@ -161,12 +166,12 @@ func New(snapshotsDir string) (*Engine, error) {
 		Tiles:        mapTiles,
 		Player:       p,
 		Items:        items,
-		snapshotsDir: snapshotsDir,
+		snapshotsDir: config.SnapshotsDir,
 	}, nil
 }
 
-func NewFromSnapshot(snapshotsDir string, snapshot *Snapshot) (*Engine, error) {
-	e, err := New(snapshotsDir)
+func NewFromSnapshot(config Config, snapshot *Snapshot) (*Engine, error) {
+	e, err := New(config)
 	if err != nil {
 		return nil, fmt.Errorf("creating engine: %w", err)
 	}

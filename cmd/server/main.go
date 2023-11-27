@@ -25,7 +25,8 @@ func main() {
 	logging.Init()
 
 	// TODO: bind to viper.
-	listen := pflag.StringP("listen", "l", ":8080", "address to listen on")
+	listen := pflag.StringP("listen", "s", ":8080", "address to listen on")
+	level := pflag.StringP("level", "l", "", "level to load")
 	snapshotsDir := pflag.String("snapshots-dir", "snapshots", "directory to save snapshots to")
 	pflag.Parse()
 
@@ -47,20 +48,25 @@ func main() {
 			snapshotFilename = f.Name()
 		}
 
+		engineConfig := engine.Config{
+			SnapshotsDir: *snapshotsDir,
+			Level:        *level,
+		}
+
 		if snapshotFilename != "" {
 			data, err := os.ReadFile(filepath.Join(*snapshotsDir, snapshotFilename))
 			if err != nil {
 				return nil, fmt.Errorf("reading snapshot file: %w", err)
 			}
 
-			e, err := engine.NewFromSnapshot(*snapshotsDir, &engine.Snapshot{Data: data})
+			e, err := engine.NewFromSnapshot(engineConfig, &engine.Snapshot{Data: data})
 			if err != nil {
 				return nil, fmt.Errorf("creating engine from snapshot: %w", err)
 			}
 			return e, nil
 		}
 
-		e, err := engine.New(*snapshotsDir)
+		e, err := engine.New(engineConfig)
 		if err != nil {
 			return nil, fmt.Errorf("creating engine without snapshot: %w", err)
 		}
