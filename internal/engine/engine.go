@@ -29,10 +29,11 @@ import (
 type Factory func() (*Engine, error)
 
 type Engine struct {
-	Tiles   []*tiles.StaticTile `json:"tiles"`
-	Player  *player.Player      `json:"player"`
-	Items   []*item.Item        `json:"items"`
-	signKey []byte              `json:"-"`
+	Tiles  []*tiles.StaticTile `json:"tiles"`
+	Player *player.Player      `json:"player"`
+	Items  []*item.Item        `json:"items"`
+
+	signKey []byte
 }
 
 func getProperties(o *tmx.Object) map[string]string {
@@ -138,10 +139,16 @@ func New(signKey []byte) (*Engine, error) {
 		for _, o := range og.Objects {
 			props := getProperties(&o)
 			if props["type"] == "item" {
-				items = append(items, item.New(&geometry.Point{
-					X: o.X,
-					Y: o.Y,
-				}, int(o.Width), int(o.Height), props["name"], false))
+				items = append(items, item.New(
+					&geometry.Point{
+						X: o.X,
+						Y: o.Y,
+					},
+					o.Width,
+					o.Height,
+					props["name"],
+					false,
+				))
 			}
 		}
 	}

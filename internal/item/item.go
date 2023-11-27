@@ -19,15 +19,15 @@ type Item struct {
 	Collected bool   `json:"collected"`
 }
 
-func New(origin *geometry.Point, width, height int, name string, important bool) *Item {
-	img := ebiten.NewImage(width, height)
+func New(origin *geometry.Point, width, height float64, name string, important bool) *Item {
+	img := ebiten.NewImage(int(width), int(height))
 	img.Fill(color.RGBA{R: 0xff, G: 0x00, B: 0x00, A: 0xff})
 
 	return &Item{
 		Object: &object.Object{
 			Origin: origin,
-			Width:  float64(width),
-			Height: float64(height),
+			Width:  width,
+			Height: height,
 		},
 		Image:     img,
 		Name:      name,
