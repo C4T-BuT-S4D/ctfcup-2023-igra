@@ -2,11 +2,14 @@ package main
 
 import (
 	"encoding/json"
-	"net"
+	"errors"
+	"net/http"
 	"os"
 
+	mu "github.com/c4t-but-s4d/cbs-go/multiproto"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/pflag"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
@@ -23,16 +26,14 @@ type Config struct {
 func main() {
 	logging.Init()
 
-	// TODO: use flags library
+	// TODO: bind to viper.
+	configPath := pflag.StringP("config", "c", "configs/server.json", "path to config file")
+	listen := pflag.StringP("listen", "l", ":8080", "address to listen on")
+	pflag.Parse()
 
-	cfgPath := "configs/server.json"
-	if len(os.Args) > 1 {
-		cfgPath = os.Args[1]
-	}
-
-	cfgFile, err := os.Open(cfgPath)
+	cfgFile, err := os.Open(*configPath)
 	if err != nil {
-		logrus.Fatalf("opening config file %s: %v", cfgPath, err)
+		logrus.Fatalf("error opening config file: %v", err)
 	}
 
 	var cfg Config
@@ -49,15 +50,16 @@ func main() {
 	gameserverpb.RegisterGameServerServiceServer(s, gs)
 	reflection.Register(s)
 
-	lis, err := net.Listen("tcp", ":8080")
-	if err != nil {
-		logrus.Fatalf("creating listener: %v", err)
+	multiProtoHandler := mu.NewHandler(s)
+	httpServer := &http.Server{
+		Addr:    *listen,
+		Handler: multiProtoHandler,
 	}
 
 	go func() {
-		logrus.Infof("starting server on %v", lis.Addr())
-		if err := s.Serve(lis); err != nil {
-			logrus.Fatalf("failed to serve: %v", err)
+		logrus.Infof("starting server on %v", httpServer.Addr)
+		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logrus.Fatalf("error running http server: %v", err)
 		}
 	}()
 
