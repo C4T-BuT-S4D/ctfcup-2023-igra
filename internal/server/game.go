@@ -18,10 +18,12 @@ type Game struct {
 	engine *engine.Engine
 
 	lock sync.Mutex
+
+	snapshotsDir string
 }
 
-func NewGame() *Game {
-	return &Game{}
+func NewGame(snapshotsDir string) *Game {
+	return &Game{snapshotsDir: snapshotsDir}
 }
 
 func (g *Game) processEvent(event *gameserverpb.ClientEvent) error {
@@ -34,6 +36,18 @@ func (g *Game) processEvent(event *gameserverpb.ClientEvent) error {
 
 	logrus.Debugf("new update from client: %v", event)
 	inp := input.NewFromProto(event.KeysPressed)
+
+	if inp.IsKeyNewlyPressed(ebiten.KeySlash) {
+		s, err := g.engine.MakeSnapshot()
+		if err != nil {
+			return fmt.Errorf("making snapshot: %w", err)
+		}
+
+		if err := g.engine.SaveSnapshot(s); err != nil {
+			return fmt.Errorf("saving snapshot: %w", err)
+		}
+	}
+
 	if err := g.engine.Update(inp); err != nil {
 		return fmt.Errorf("updating engine state: %w", err)
 	}

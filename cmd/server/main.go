@@ -1,10 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 
 	mu "github.com/c4t-but-s4d/cbs-go/multiproto"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -19,31 +21,50 @@ import (
 	gameserverpb "github.com/c4t-but-s4d/ctfcup-2023-igra/proto/go/gameserver"
 )
 
-type Config struct {
-	SignKey string `json:"sign_key"`
-}
-
 func main() {
 	logging.Init()
 
 	// TODO: bind to viper.
-	configPath := pflag.StringP("config", "c", "configs/server.json", "path to config file")
 	listen := pflag.StringP("listen", "l", ":8080", "address to listen on")
+	snapshotsDir := pflag.String("snapshots-dir", "snapshots", "directory to save snapshots to")
 	pflag.Parse()
 
-	cfgFile, err := os.Open(*configPath)
-	if err != nil {
-		logrus.Fatalf("error opening config file: %v", err)
-	}
+	game := server.NewGame(*snapshotsDir)
 
-	var cfg Config
-	if err := json.NewDecoder(cfgFile).Decode(&cfg); err != nil {
-		logrus.Fatalf("decoding config: %v", err)
-	}
-
-	game := server.NewGame()
 	gs := server.New(game, func() (*engine.Engine, error) {
-		return engine.New([]byte(cfg.SignKey))
+		files, err := os.ReadDir(*snapshotsDir)
+		if err != nil {
+			return nil, fmt.Errorf("listing snapshots directory: %w", err)
+		}
+
+		var snapshotFilename string
+
+		for _, f := range files {
+			if !f.Type().IsRegular() || !strings.HasPrefix(f.Name(), "snapshot") {
+				continue
+			}
+
+			snapshotFilename = f.Name()
+		}
+
+		if snapshotFilename != "" {
+			data, err := os.ReadFile(filepath.Join(*snapshotsDir, snapshotFilename))
+			if err != nil {
+				return nil, fmt.Errorf("reading snapshot file: %w", err)
+			}
+
+			e, err := engine.NewFromSnapshot(*snapshotsDir, &engine.Snapshot{Data: data})
+			if err != nil {
+				return nil, fmt.Errorf("creating engine from snapshot: %w", err)
+			}
+			return e, nil
+		}
+
+		e, err := engine.New(*snapshotsDir)
+		if err != nil {
+			return nil, fmt.Errorf("creating engine without snapshot: %w", err)
+		}
+		return e, nil
 	})
 
 	s := grpc.NewServer()

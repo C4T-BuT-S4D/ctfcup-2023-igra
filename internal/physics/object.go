@@ -8,8 +8,8 @@ import (
 type Object struct {
 	*object.Object
 
-	Speed        *geometry.Vector `json:"speed"`
-	Acceleration *geometry.Vector `json:"acceleration"`
+	Speed        *geometry.Vector
+	Acceleration *geometry.Vector
 }
 
 const GravityAcceleration = 1.0 / 6.0

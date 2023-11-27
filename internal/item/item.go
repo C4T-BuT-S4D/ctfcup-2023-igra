@@ -10,7 +10,7 @@ import (
 )
 
 type Item struct {
-	*object.Object
+	*object.Object `json:"-"`
 
 	Image *ebiten.Image `json:"-"`
 

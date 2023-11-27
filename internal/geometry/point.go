@@ -1,8 +1,8 @@
 package geometry
 
 type Point struct {
-	X float64 `json:"x"`
-	Y float64 `json:"y"`
+	X float64
+	Y float64
 }
 
 func (p *Point) Add(v *Vector) *Point {

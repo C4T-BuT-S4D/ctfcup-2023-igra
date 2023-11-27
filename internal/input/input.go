@@ -13,6 +13,7 @@ var interestingKeys = []ebiten.Key{
 	ebiten.KeyS,
 	ebiten.KeyD,
 	ebiten.KeySpace,
+	ebiten.KeySlash,
 }
 
 type Input struct {

@@ -2,10 +2,8 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"os/signal"
 	"syscall"
 
@@ -21,19 +19,13 @@ import (
 	gameserverpb "github.com/c4t-but-s4d/ctfcup-2023-igra/proto/go/gameserver"
 )
 
-type Config struct {
-	SignKey string `json:"sign_key"`
-}
+var ErrNoStartSnapshot = errors.New("no start snapshot")
 
-func NewGame(ctx context.Context, cfg *Config, client gameserverpb.GameServerServiceClient) (*Game, error) {
-	e, err := engine.New([]byte(cfg.SignKey))
-	if err != nil {
-		return nil, fmt.Errorf("initializing engine: %w", err)
-	}
-
+func NewGame(ctx context.Context, client gameserverpb.GameServerServiceClient) (*Game, error) {
 	g := &Game{
-		Engine: e,
-		ctx:    ctx,
+		ctx: ctx,
+
+		inp: input.New(),
 
 		recvErrChan:     make(chan error, 1),
 		serverEventChan: make(chan *gameserverpb.ServerEvent),
@@ -46,6 +38,26 @@ func NewGame(ctx context.Context, cfg *Config, client gameserverpb.GameServerSer
 		}
 		g.stream = eventStream
 
+		startSnapshotEvent, err := g.stream.Recv()
+		if err != nil {
+			return nil, fmt.Errorf("reading start snapshot event: %w", err)
+		}
+
+		if snapshotProto := startSnapshotEvent.GetSnapshot(); snapshotProto.Data == nil {
+			e, err := engine.New("")
+			if err != nil {
+				return nil, fmt.Errorf("creating engine without snapshot: %w", err)
+			}
+			g.Engine = e
+		} else {
+			e, err := engine.NewFromSnapshot("", engine.NewSnapshotFromProto(snapshotProto))
+			if err != nil {
+				return nil, fmt.Errorf("creating engine from snapshot: %w", err)
+			}
+
+			g.Engine = e
+		}
+
 		go func() {
 			serverEvent, err := eventStream.Recv()
 			if err != nil {
@@ -54,6 +66,12 @@ func NewGame(ctx context.Context, cfg *Config, client gameserverpb.GameServerSer
 			}
 			g.serverEventChan <- serverEvent
 		}()
+	} else {
+		e, err := engine.New("")
+		if err != nil {
+			return nil, fmt.Errorf("initializing engine: %w", err)
+		}
+		g.Engine = e
 	}
 
 	return g, nil
@@ -64,6 +82,8 @@ type Game struct {
 	stream gameserverpb.GameServerService_ProcessEventClient
 	ctx    context.Context
 
+	inp *input.Input
+
 	serverEventChan chan *gameserverpb.ServerEvent
 	recvErrChan     chan error
 }
@@ -73,8 +93,7 @@ func (g *Game) Update() error {
 		return err
 	}
 
-	inp := input.New()
-	inp.Update()
+	g.inp.Update()
 
 	select {
 	case err := <-g.recvErrChan:
@@ -90,13 +109,13 @@ func (g *Game) Update() error {
 	if g.stream != nil {
 		if err := g.stream.Send(&gameserverpb.ClientEventRequest{
 			Checksum: checksum,
-			Event:    &gameserverpb.ClientEvent{KeysPressed: inp.ToProto()},
+			Event:    &gameserverpb.ClientEvent{KeysPressed: g.inp.ToProto()},
 		}); err != nil {
 			return fmt.Errorf("failed to send event to the server: %w", err)
 		}
 	}
 
-	if err := g.Engine.Update(inp); err != nil {
+	if err := g.Engine.Update(g.inp); err != nil {
 		return fmt.Errorf("updating engine state: %w", err)
 	}
 
@@ -115,25 +134,14 @@ func main() {
 	logging.Init()
 
 	// TODO: bind to viper.
-	configPath := pflag.StringP("config", "c", "configs/client.json", "path to config file")
 	serverAddr := pflag.StringP("server", "s", "127.0.0.1:8080", "server address")
 	pflag.Parse()
-
-	cfgFile, err := os.Open(*configPath)
-	if err != nil {
-		logrus.Fatalf("opening config file: %v", err)
-	}
-
-	var cfg Config
-	if err := json.NewDecoder(cfgFile).Decode(&cfg); err != nil {
-		logrus.Fatalf("decoding config: %v", err)
-	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
 
 	var client gameserverpb.GameServerServiceClient
-	if *serverAddr != "" {
+	if *serverAddr != "standalone" {
 		conn, err := grpc.DialContext(ctx, *serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			logrus.Fatalf("Failed to connect to server: %v", err)
@@ -141,7 +149,7 @@ func main() {
 		client = gameserverpb.NewGameServerServiceClient(conn)
 	}
 
-	g, err := NewGame(ctx, &cfg, client)
+	g, err := NewGame(ctx, client)
 	if err != nil {
 		logrus.Fatalf("Failed to create game: %v", err)
 	}

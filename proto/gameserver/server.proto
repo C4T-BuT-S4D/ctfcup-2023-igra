@@ -23,8 +23,14 @@ message ClientEventRequest {
   string checksum = 2;
 }
 
-message ServerEvent {
+message EngineSnapshot {
+  bytes data = 1;
+}
 
+message ServerEvent {
+  oneof event {
+    EngineSnapshot snapshot = 1;
+  }
 }
 
 message InventoryRequest {

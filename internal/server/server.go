@@ -55,6 +55,14 @@ func (g *GameServer) ProcessEvent(stream gameserverpb.GameServerService_ProcessE
 	g.game.setEngine(eng)
 	defer g.game.resetEngine()
 
+	if err := stream.Send(&gameserverpb.ServerEvent{
+		Event: &gameserverpb.ServerEvent_Snapshot{
+			Snapshot: eng.StartSnapshot.ToProto(),
+		},
+	}); err != nil {
+		return status.Errorf(codes.Internal, "failed to send start snapshot: %v", err)
+	}
+
 	for {
 		req, err := stream.Recv()
 		if errors.Is(err, io.EOF) {

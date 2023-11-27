@@ -1,13 +1,15 @@
 package engine
 
 import (
-	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"image"
+	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/Rulox/ebitmx"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -21,6 +23,7 @@ import (
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/player"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/resources"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/tiles"
+	gameserverpb "github.com/c4t-but-s4d/ctfcup-2023-igra/proto/go/gameserver"
 
 	// Register png codec.
 	_ "image/png"
@@ -29,11 +32,12 @@ import (
 type Factory func() (*Engine, error)
 
 type Engine struct {
-	Tiles  []*tiles.StaticTile `json:"tiles"`
+	Tiles  []*tiles.StaticTile `json:"-"`
 	Player *player.Player      `json:"player"`
 	Items  []*item.Item        `json:"items"`
 
-	signKey []byte
+	StartSnapshot *Snapshot `json:"-"`
+	snapshotsDir  string
 }
 
 func getProperties(o *tmx.Object) map[string]string {
@@ -71,7 +75,7 @@ func getTileImgByID(tileID tmx.ID, tileSet *ebitmx.EbitenTileset, img *ebiten.Im
 	return img.SubImage(image.Rect(x0, y0, x1, y1)).(*ebiten.Image)
 }
 
-func New(signKey []byte) (*Engine, error) {
+func New(snapshotsDir string) (*Engine, error) {
 	var resultImage *ebiten.Image
 	imgFile, err := resources.EmbeddedFS.Open("tiles/result.png")
 	if err != nil {
@@ -154,30 +158,43 @@ func New(signKey []byte) (*Engine, error) {
 	}
 
 	return &Engine{
-		Tiles:  mapTiles,
-		Player: p,
-		Items:  items,
+		Tiles:        mapTiles,
+		Player:       p,
+		Items:        items,
+		snapshotsDir: snapshotsDir,
 	}, nil
 }
 
-var ErrIncorrectHmac = errors.New("incorrect snapshot hmac")
-
-func NewFromSnapshot(signKey []byte, snapshot *Snapshot) (*Engine, error) {
-	mac := hmac.New(sha256.New, signKey)
-	if _, err := mac.Write(snapshot.Data); err != nil {
-		return nil, fmt.Errorf("signing data: %w", err)
+func NewFromSnapshot(snapshotsDir string, snapshot *Snapshot) (*Engine, error) {
+	e, err := New(snapshotsDir)
+	if err != nil {
+		return nil, fmt.Errorf("creating engine: %w", err)
 	}
 
-	if !hmac.Equal(mac.Sum(nil), snapshot.Sign) {
-		return nil, ErrIncorrectHmac
+	e.StartSnapshot = snapshot
+
+	if err := json.Unmarshal(snapshot.Data, e); err != nil {
+		return nil, fmt.Errorf("applying snapshot: %w", err)
 	}
 
-	return nil, nil
+	return e, nil
 }
 
 type Snapshot struct {
 	Data []byte
-	Sign []byte
+}
+
+func NewSnapshotFromProto(proto *gameserverpb.EngineSnapshot) *Snapshot {
+	return &Snapshot{Data: proto.Data}
+}
+
+func (s *Snapshot) ToProto() *gameserverpb.EngineSnapshot {
+	if s == nil {
+		return nil
+	}
+	return &gameserverpb.EngineSnapshot{
+		Data: s.Data,
+	}
 }
 
 func (e *Engine) MakeSnapshot() (*Snapshot, error) {
@@ -186,24 +203,22 @@ func (e *Engine) MakeSnapshot() (*Snapshot, error) {
 		return nil, fmt.Errorf("marshalling engine: %w", err)
 	}
 
-	mac := hmac.New(sha256.New, e.signKey)
-	if _, err := mac.Write(data); err != nil {
-		return nil, fmt.Errorf("signing data: %w", err)
-	}
-
 	return &Snapshot{
 		Data: data,
-		Sign: mac.Sum(nil),
 	}, nil
 }
 
-func (s *Snapshot) Resign(signKey []byte) error {
-	mac := hmac.New(sha256.New, signKey)
-	if _, err := mac.Write(s.Data); err != nil {
-		return fmt.Errorf("signing data: %w", err)
+func (e *Engine) SaveSnapshot(snapshot *Snapshot) error {
+	if e.snapshotsDir == "" {
+		return nil
 	}
 
-	s.Sign = mac.Sum(nil)
+	filename := fmt.Sprintf("snapshot_%s", time.Now().UTC().Format("2006-01-02T15:04:05.999999999"))
+
+	if err := os.WriteFile(filepath.Join(e.snapshotsDir, filename), snapshot.Data, 0o400); err != nil {
+		return fmt.Errorf("writing snapshot file: %w", err)
+	}
+
 	return nil
 }
 
@@ -243,7 +258,9 @@ func (e *Engine) Update(inp *input.Input) error {
 	e.AlignPlayerX()
 	e.Player.Move(&geometry.Vector{X: 0, Y: e.Player.Speed.Y})
 	e.AlignPlayerY()
-	e.CollectItems()
+	if err := e.CollectItems(); err != nil {
+		return fmt.Errorf("collecting items: %w", err)
+	}
 
 	return nil
 }
@@ -317,7 +334,9 @@ func (e *Engine) AlignPlayerY() {
 	}
 }
 
-func (e *Engine) CollectItems() {
+func (e *Engine) CollectItems() error {
+	collectedSomething := false
+
 	for _, c := range e.Collisions(e.Player.Rectangle()) {
 		if c.Type() != object.Item {
 			continue
@@ -329,20 +348,36 @@ func (e *Engine) CollectItems() {
 		}
 
 		e.Player.Collect(it)
+
+		collectedSomething = true
 	}
+
+	if collectedSomething {
+		snapshot, err := e.MakeSnapshot()
+		if err != nil {
+			return fmt.Errorf("making snapshot: %w", err)
+		}
+
+		if err := e.SaveSnapshot(snapshot); err != nil {
+			return fmt.Errorf("saving snapshot: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (e *Engine) Checksum() (string, error) {
-	if snapshot, err := e.MakeSnapshot(); err != nil {
+	snapshot, err := e.MakeSnapshot()
+	if err != nil {
 		return "", fmt.Errorf("making snapshot: %w", err)
-	} else {
-		hash := sha256.New()
-		if _, err := hash.Write(snapshot.Data); err != nil {
-			return "", fmt.Errorf("hashing snapshot: %w", err)
-		}
-
-		return hex.EncodeToString(hash.Sum(snapshot.Data)), nil
 	}
+
+	hash := sha256.New()
+	if _, err := hash.Write(snapshot.Data); err != nil {
+		return "", fmt.Errorf("hashing snapshot: %w", err)
+	}
+
+	return hex.EncodeToString(hash.Sum(snapshot.Data)), nil
 }
 
 var ErrInvalidChecksum = errors.New("invalid checksum")
