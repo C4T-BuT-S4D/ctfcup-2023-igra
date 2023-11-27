@@ -11,6 +11,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/pflag"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -113,21 +114,14 @@ func (g *Game) Layout(_, _ int) (screenWidth, screenHeight int) {
 func main() {
 	logging.Init()
 
-	// TODO: use flags library
+	// TODO: bind to viper.
+	configPath := pflag.StringP("config", "c", "configs/client.json", "path to config file")
+	serverAddr := pflag.StringP("server", "s", "127.0.0.1:8080", "server address")
+	pflag.Parse()
 
-	cfgPath := "configs/client.json"
-	if len(os.Args) > 1 {
-		cfgPath = os.Args[1]
-	}
-
-	serverHost := ""
-	if len(os.Args) > 2 {
-		serverHost = os.Args[2]
-	}
-
-	cfgFile, err := os.Open(cfgPath)
+	cfgFile, err := os.Open(*configPath)
 	if err != nil {
-		logrus.Fatalf("opening config file %s: %v", cfgPath, err)
+		logrus.Fatalf("opening config file: %v", err)
 	}
 
 	var cfg Config
@@ -139,8 +133,8 @@ func main() {
 	defer cancel()
 
 	var client gameserverpb.GameServerServiceClient
-	if serverHost != "" {
-		conn, err := grpc.DialContext(ctx, serverHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if *serverAddr != "" {
+		conn, err := grpc.DialContext(ctx, *serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			logrus.Fatalf("Failed to connect to server: %v", err)
 		}
