@@ -7,6 +7,22 @@ type Rectangle struct {
 	BottomY float64
 }
 
+func (a *Rectangle) AddVector(other *Vector) *Rectangle {
+	return &Rectangle{
+		LeftX:   a.LeftX + other.X,
+		TopY:    a.TopY + other.Y,
+		RightX:  a.RightX + other.X,
+		BottomY: a.BottomY + other.Y,
+	}
+}
+
+func (a *Rectangle) Sub(other *Rectangle) *Vector {
+	return &Vector{
+		X: a.LeftX - other.LeftX,
+		Y: a.TopY - other.TopY,
+	}
+}
+
 func (a *Rectangle) Intersects(b *Rectangle) bool {
 	return !(a.RightX <= b.LeftX || b.RightX <= a.LeftX || a.BottomY <= b.TopY || b.BottomY <= a.TopY)
 }

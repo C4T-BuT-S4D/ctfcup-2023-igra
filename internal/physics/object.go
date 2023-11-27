@@ -23,6 +23,6 @@ func NewObject(o *object.Object) *Object {
 }
 
 func (o *Object) ApplyAcceleration() *Object {
-	o.Speed.Add(o.Acceleration)
+	o.Speed = o.Speed.Add(o.Acceleration)
 	return o
 }

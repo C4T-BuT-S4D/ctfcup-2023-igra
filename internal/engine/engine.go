@@ -6,6 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/camera"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/portal"
+	"github.com/samber/lo"
 	"image"
 	"os"
 	"path/filepath"
@@ -37,9 +40,11 @@ type Config struct {
 }
 
 type Engine struct {
-	Tiles  []*tiles.StaticTile `json:"-"`
-	Player *player.Player      `json:"player"`
-	Items  []*item.Item        `json:"items"`
+	Tiles   []*tiles.StaticTile `json:"-"`
+	Camera  *camera.Camera      `json:"-"`
+	Player  *player.Player      `json:"player"`
+	Items   []*item.Item        `json:"items"`
+	Portals []*portal.Portal    `json:"-"`
 
 	StartSnapshot *Snapshot `json:"-"`
 	snapshotsDir  string
@@ -143,11 +148,14 @@ func New(config Config) (*Engine, error) {
 	p := player.New(playerPos)
 
 	var items []*item.Item
+	portalsMap := make(map[string]*portal.Portal)
 
 	for _, og := range testMap.ObjectGroups {
 		for _, o := range og.Objects {
 			props := getProperties(&o)
-			if props["type"] == "item" {
+			objectType := props["type"]
+			switch objectType {
+			case "item":
 				items = append(items, item.New(
 					&geometry.Point{
 						X: o.X,
@@ -158,14 +166,50 @@ func New(config Config) (*Engine, error) {
 					props["name"],
 					false,
 				))
+			case "portal":
+				portalsMap[props["portal"]] = portal.New(
+					&geometry.Point{
+						X: o.X,
+						Y: o.Y,
+					},
+					o.Width,
+					o.Height,
+					props["portal-to"],
+					nil)
 			}
 		}
+	}
+	for name, p := range portalsMap {
+		if p.PortalTo == "" {
+			continue
+		}
+		toPortal := portalsMap[p.PortalTo]
+		if toPortal == nil {
+			return nil, fmt.Errorf("destination %s not found for portal %s", p.PortalTo, name)
+		}
+		p.TeleportTo = toPortal.Origin.Add(&geometry.Vector{
+			X: 16,
+			Y: 0,
+		})
+	}
+
+	cam := &camera.Camera{
+		Object: &object.Object{
+			Origin: &geometry.Point{
+				X: 0,
+				Y: 0,
+			},
+			Width:  camera.WIDTH,
+			Height: camera.HEIGHT,
+		},
 	}
 
 	return &Engine{
 		Tiles:        mapTiles,
+		Camera:       cam,
 		Player:       p,
 		Items:        items,
+		Portals:      lo.Values(portalsMap),
 		snapshotsDir: config.SnapshotsDir,
 	}, nil
 }
@@ -228,33 +272,49 @@ func (e *Engine) SaveSnapshot(snapshot *Snapshot) error {
 }
 
 func (e *Engine) Draw(screen *ebiten.Image) {
-	for _, t := range e.Tiles {
-		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Translate(
-			t.Rectangle().LeftX,
-			t.Rectangle().TopY,
-		)
-		screen.DrawImage(t.Image, op)
-	}
+	cols := e.Collisions(e.Camera.Rectangle())
 
-	for _, it := range e.Items {
-		if it.Collected {
-			continue
+	for _, c := range cols {
+		visible := c.Rectangle().Sub(e.Camera.Rectangle())
+		base := geometry.Origin.Add(visible)
+
+		switch c.Type() {
+		case object.StaticTileType:
+			t := c.(*tiles.StaticTile)
+			op := &ebiten.DrawImageOptions{}
+			op.GeoM.Translate(
+				base.X,
+				base.Y,
+			)
+			screen.DrawImage(t.Image, op)
+		case object.Item:
+			it := c.(*item.Item)
+			if it.Collected {
+				continue
+			}
+			op := &ebiten.DrawImageOptions{}
+			op.GeoM.Translate(
+				base.X,
+				base.Y,
+			)
+			screen.DrawImage(it.Image, op)
+		case object.PlayerType:
+			op := &ebiten.DrawImageOptions{}
+			op.GeoM.Translate(
+				base.X,
+				base.Y,
+			)
+			screen.DrawImage(e.Player.Image, op)
+		case object.Portal:
+			p := c.(*portal.Portal)
+			op := &ebiten.DrawImageOptions{}
+			op.GeoM.Translate(
+				base.X,
+				base.Y,
+			)
+			screen.DrawImage(p.Image, op)
 		}
-		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Translate(
-			it.Rectangle().LeftX,
-			it.Rectangle().TopY,
-		)
-		screen.DrawImage(it.Image, op)
 	}
-
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(
-		e.Player.Rectangle().LeftX,
-		e.Player.Rectangle().TopY,
-	)
-	screen.DrawImage(e.Player.Image, op)
 }
 
 func (e *Engine) Update(inp *input.Input) error {
@@ -263,9 +323,14 @@ func (e *Engine) Update(inp *input.Input) error {
 	e.AlignPlayerX()
 	e.Player.Move(&geometry.Vector{X: 0, Y: e.Player.Speed.Y})
 	e.AlignPlayerY()
+	e.CheckPortals()
 	if err := e.CollectItems(); err != nil {
 		return fmt.Errorf("collecting items: %w", err)
 	}
+	e.Camera.MoveTo(e.Player.Origin.Add(&geometry.Vector{
+		X: -camera.WIDTH/2 + e.Player.Width/2,
+		Y: -camera.HEIGHT/2 + e.Player.Height/2,
+	}))
 
 	return nil
 }
@@ -369,6 +434,20 @@ func (e *Engine) CollectItems() error {
 	}
 
 	return nil
+}
+
+func (e *Engine) CheckPortals() {
+	for _, c := range e.Collisions(e.Player.Rectangle()) {
+		if c.Type() != object.Portal {
+			continue
+		}
+
+		p := c.(*portal.Portal)
+		if p.TeleportTo == nil {
+			continue
+		}
+		e.Player.MoveTo(p.TeleportTo)
+	}
 }
 
 func (e *Engine) Checksum() (string, error) {

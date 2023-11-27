@@ -7,9 +7,7 @@ type Vector struct {
 }
 
 func (v *Vector) Add(other *Vector) *Vector {
-	v.X += other.X
-	v.Y += other.Y
-	return v
+	return &Vector{X: v.X + other.X, Y: v.Y + other.Y}
 }
 
 func (v *Vector) LengthSquared() float64 {

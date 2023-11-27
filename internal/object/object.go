@@ -8,6 +8,7 @@ const (
 	StaticTileType Type = iota
 	PlayerType
 	Item
+	Portal
 )
 
 func (t Type) String() string {
@@ -39,7 +40,12 @@ func (o *Object) Rectangle() *geometry.Rectangle {
 }
 
 func (o *Object) Move(d *geometry.Vector) *Object {
-	o.Origin.Add(d)
+	o.Origin = o.Origin.Add(d)
+	return o
+}
+
+func (o *Object) MoveTo(p *geometry.Point) *Object {
+	o.Origin = p
 	return o
 }
 
