@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/camera"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/sprites"
 	"os/signal"
 	"syscall"
 
@@ -35,6 +37,8 @@ func NewGame(ctx context.Context, client gameserverpb.GameServerServiceClient, l
 		Level: level,
 	}
 
+	smng := sprites.NewManager()
+
 	if client != nil {
 		eventStream, err := client.ProcessEvent(ctx)
 		if err != nil {
@@ -48,13 +52,13 @@ func NewGame(ctx context.Context, client gameserverpb.GameServerServiceClient, l
 		}
 
 		if snapshotProto := startSnapshotEvent.GetSnapshot(); snapshotProto.Data == nil {
-			e, err := engine.New(engineConfig)
+			e, err := engine.New(engineConfig, smng)
 			if err != nil {
 				return nil, fmt.Errorf("creating engine without snapshot: %w", err)
 			}
 			g.Engine = e
 		} else {
-			e, err := engine.NewFromSnapshot(engineConfig, engine.NewSnapshotFromProto(snapshotProto))
+			e, err := engine.NewFromSnapshot(engineConfig, engine.NewSnapshotFromProto(snapshotProto), smng)
 			if err != nil {
 				return nil, fmt.Errorf("creating engine from snapshot: %w", err)
 			}
@@ -71,7 +75,7 @@ func NewGame(ctx context.Context, client gameserverpb.GameServerServiceClient, l
 			g.serverEventChan <- serverEvent
 		}()
 	} else {
-		e, err := engine.New(engineConfig)
+		e, err := engine.New(engineConfig, smng)
 		if err != nil {
 			return nil, fmt.Errorf("initializing engine: %w", err)
 		}
@@ -131,7 +135,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 }
 
 func (g *Game) Layout(_, _ int) (screenWidth, screenHeight int) {
-	return 640, 480
+	return camera.WIDTH, camera.HEIGHT
 }
 
 func main() {

@@ -9,6 +9,7 @@ const (
 	PlayerType
 	Item
 	Portal
+	Spike
 )
 
 func (t Type) String() string {
@@ -19,6 +20,10 @@ func (t Type) String() string {
 		return "PlayerType"
 	case Item:
 		return "Item"
+	case Portal:
+		return "Portal"
+	case Spike:
+		return "Spike"
 	default:
 		panic("unknown type")
 	}

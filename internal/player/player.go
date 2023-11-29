@@ -1,8 +1,6 @@
 package player
 
 import (
-	"image/color"
-
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/geometry"
@@ -11,29 +9,39 @@ import (
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/physics"
 )
 
+const (
+	DefaultHealth = 100
+)
+
 type Player struct {
-	*physics.Object `json:"-"`
+	*object.Object    `json:"-"`
+	*physics.Physical `json:"-"`
 
 	Image *ebiten.Image `json:"-"`
 
 	Inventory *Inventory `json:"inventory"`
 
 	OnGround bool `json:"-"`
+	Health   int  `json:"health"`
 }
 
-func New(origin *geometry.Point) *Player {
-	img := ebiten.NewImage(16, 16)
-	img.Fill(color.White)
+func New(origin *geometry.Point, img *ebiten.Image) *Player {
 
 	return &Player{
-		Object: physics.NewObject(&object.Object{
+		Object: &object.Object{
 			Origin: origin,
-			Width:  16,
-			Height: 16,
-		}),
+			Width:  32,
+			Height: 32,
+		},
+		Physical:  physics.NewPhysical(),
 		Image:     img,
 		Inventory: &Inventory{},
+		Health:    DefaultHealth,
 	}
+}
+
+func (p *Player) IsDead() bool {
+	return p.Health <= 0
 }
 
 func (p *Player) Type() object.Type {

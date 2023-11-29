@@ -7,9 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/camera"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/damage"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/portal"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/sprites"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/samber/lo"
 	"image"
+	"image/color"
 	"os"
 	"path/filepath"
 	"time"
@@ -45,9 +49,11 @@ type Engine struct {
 	Player  *player.Player      `json:"player"`
 	Items   []*item.Item        `json:"items"`
 	Portals []*portal.Portal    `json:"-"`
+	Spikes  []*damage.Spike     `json:"-"`
 
-	StartSnapshot *Snapshot `json:"-"`
-	snapshotsDir  string
+	StartSnapshot  *Snapshot `json:"-"`
+	snapshotsDir   string
+	spritesManager *sprites.Manager
 }
 
 func getProperties(o *tmx.Object) map[string]string {
@@ -85,7 +91,7 @@ func getTileImgByID(tileID tmx.ID, tileSet *ebitmx.EbitenTileset, img *ebiten.Im
 	return img.SubImage(image.Rect(x0, y0, x1, y1)).(*ebiten.Image)
 }
 
-func New(config Config) (*Engine, error) {
+func New(config Config, spriteManager *sprites.Manager) (*Engine, error) {
 	var resultImage *ebiten.Image
 	imgFile, err := resources.EmbeddedFS.Open("tiles/result.png")
 	if err != nil {
@@ -145,9 +151,15 @@ func New(config Config) (*Engine, error) {
 		return nil, fmt.Errorf("can't find player position: %w", err)
 	}
 
-	p := player.New(playerPos)
+	playerSprite, err := spriteManager.GetSprite(sprites.Player)
+	if err != nil {
+		return nil, fmt.Errorf("getting player sprite: %w", err)
+	}
+
+	p := player.New(playerPos, playerSprite)
 
 	var items []*item.Item
+	var spikes []*damage.Spike
 	portalsMap := make(map[string]*portal.Portal)
 
 	for _, og := range testMap.ObjectGroups {
@@ -176,6 +188,21 @@ func New(config Config) (*Engine, error) {
 					o.Height,
 					props["portal-to"],
 					nil)
+			case "spike":
+				img, err := spriteManager.GetSprite(sprites.Spike)
+				if err != nil {
+					return nil, fmt.Errorf("getting spike sprite: %w", err)
+				}
+
+				spikes = append(spikes, damage.NewSpike(
+					&geometry.Point{
+						X: o.X,
+						Y: o.Y,
+					},
+					img,
+					o.Width,
+					o.Height,
+				))
 			}
 		}
 	}
@@ -188,7 +215,7 @@ func New(config Config) (*Engine, error) {
 			return nil, fmt.Errorf("destination %s not found for portal %s", p.PortalTo, name)
 		}
 		p.TeleportTo = toPortal.Origin.Add(&geometry.Vector{
-			X: 16,
+			X: 32,
 			Y: 0,
 		})
 	}
@@ -210,12 +237,13 @@ func New(config Config) (*Engine, error) {
 		Player:       p,
 		Items:        items,
 		Portals:      lo.Values(portalsMap),
+		Spikes:       spikes,
 		snapshotsDir: config.SnapshotsDir,
 	}, nil
 }
 
-func NewFromSnapshot(config Config, snapshot *Snapshot) (*Engine, error) {
-	e, err := New(config)
+func NewFromSnapshot(config Config, snapshot *Snapshot, spritesManager *sprites.Manager) (*Engine, error) {
+	e, err := New(config, spritesManager)
 	if err != nil {
 		return nil, fmt.Errorf("creating engine: %w", err)
 	}
@@ -272,58 +300,60 @@ func (e *Engine) SaveSnapshot(snapshot *Snapshot) error {
 }
 
 func (e *Engine) Draw(screen *ebiten.Image) {
-	cols := e.Collisions(e.Camera.Rectangle())
+	if e.Player.IsDead() {
+		// Draw "YOU DIED" text over all screen using red color.
+		img := ebiten.NewImageFromImage(screen)
+		img.Fill(color.RGBA{0x80, 0x80, 0x80, 0xff})
+		text := "YOU DIED"
 
-	for _, c := range cols {
+		ebitenutil.DebugPrintAt(img, text, 0, 0)
+		screen.DrawImage(img, nil)
+		return
+	}
+
+	for _, c := range e.Collisions(e.Camera.Rectangle()) {
 		visible := c.Rectangle().Sub(e.Camera.Rectangle())
 		base := geometry.Origin.Add(visible)
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Translate(
+			base.X,
+			base.Y,
+		)
 
 		switch c.Type() {
 		case object.StaticTileType:
 			t := c.(*tiles.StaticTile)
-			op := &ebiten.DrawImageOptions{}
-			op.GeoM.Translate(
-				base.X,
-				base.Y,
-			)
 			screen.DrawImage(t.Image, op)
 		case object.Item:
 			it := c.(*item.Item)
 			if it.Collected {
 				continue
 			}
-			op := &ebiten.DrawImageOptions{}
-			op.GeoM.Translate(
-				base.X,
-				base.Y,
-			)
 			screen.DrawImage(it.Image, op)
 		case object.PlayerType:
-			op := &ebiten.DrawImageOptions{}
-			op.GeoM.Translate(
-				base.X,
-				base.Y,
-			)
 			screen.DrawImage(e.Player.Image, op)
 		case object.Portal:
 			p := c.(*portal.Portal)
-			op := &ebiten.DrawImageOptions{}
-			op.GeoM.Translate(
-				base.X,
-				base.Y,
-			)
 			screen.DrawImage(p.Image, op)
+		case object.Spike:
+			d := c.(*damage.Spike)
+			screen.DrawImage(d.Image, op)
 		}
 	}
 }
 
 func (e *Engine) Update(inp *input.Input) error {
+	if e.Player.IsDead() {
+		return nil
+	}
+
 	e.ProcessPlayerInput(inp)
 	e.Player.Move(&geometry.Vector{X: e.Player.Speed.X, Y: 0})
 	e.AlignPlayerX()
 	e.Player.Move(&geometry.Vector{X: 0, Y: e.Player.Speed.Y})
 	e.AlignPlayerY()
 	e.CheckPortals()
+	e.CheckSpikes()
 	if err := e.CollectItems(); err != nil {
 		return fmt.Errorf("collecting items: %w", err)
 	}
@@ -343,14 +373,14 @@ func (e *Engine) ProcessPlayerInput(inp *input.Input) {
 	}
 
 	if (inp.IsKeyPressed(ebiten.KeySpace) || inp.IsKeyPressed(ebiten.KeyW)) && e.Player.OnGround {
-		e.Player.Speed.Y = -5
+		e.Player.Speed.Y = -5 * 2
 	}
 
 	switch {
 	case inp.IsKeyPressed(ebiten.KeyA):
-		e.Player.Speed.X = -2.5
+		e.Player.Speed.X = -2.5 * 2
 	case inp.IsKeyPressed(ebiten.KeyD):
-		e.Player.Speed.X = 2.5
+		e.Player.Speed.X = 2.5 * 2
 	default:
 		e.Player.Speed.X = 0
 	}
@@ -447,6 +477,17 @@ func (e *Engine) CheckPortals() {
 			continue
 		}
 		e.Player.MoveTo(p.TeleportTo)
+	}
+}
+
+func (e *Engine) CheckSpikes() {
+	for _, c := range e.Collisions(e.Player.Rectangle()) {
+		if c.Type() != object.Spike {
+			continue
+		}
+
+		s := c.(*damage.Spike)
+		e.Player.Health -= s.Damage
 	}
 }
 

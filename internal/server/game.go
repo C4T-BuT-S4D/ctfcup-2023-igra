@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/camera"
 	"image/color"
 	"sync"
 
@@ -92,5 +93,5 @@ func (g *Game) Draw(screen *ebiten.Image) {
 }
 
 func (g *Game) Layout(_, _ int) (screenWidth, screenHeight int) {
-	return 640, 480
+	return camera.WIDTH, camera.HEIGHT
 }

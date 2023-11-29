@@ -30,5 +30,11 @@ func (e *Engine) Collisions(r *geometry.Rectangle) []object.GenericObject {
 		}
 	}
 
+	for _, t := range e.Spikes {
+		if t.Rectangle().Intersects(r) {
+			result = append(result, t)
+		}
+	}
+
 	return result
 }
