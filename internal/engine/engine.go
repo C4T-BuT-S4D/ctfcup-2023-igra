@@ -177,11 +177,11 @@ func New(config Config, spriteManager *sprites.Manager) (*Engine, error) {
 					},
 					o.Width,
 					o.Height,
-					props["name"],
+					o.Name,
 					false,
 				))
 			case "portal":
-				portalsMap[props["portal"]] = portal.New(
+				portalsMap[o.Name] = portal.New(
 					&geometry.Point{
 						X: o.X,
 						Y: o.Y,
