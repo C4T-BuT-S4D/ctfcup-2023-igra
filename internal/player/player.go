@@ -1,31 +1,58 @@
 package player
 
 import (
+	"fmt"
+
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/geometry"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/item"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/object"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/physics"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/sprites"
 )
 
 const (
-	DefaultHealth = 100
+	DefaultHealth     = 100
+	StandingAnimation = "standing"
+	RunningAnimation  = "running"
+	JumpingAnimation  = "jumping"
+	FallingAnimation  = "falling"
 )
 
 type Player struct {
 	*object.Object    `json:"-"`
 	*physics.Physical `json:"-"`
 
-	Image *ebiten.Image `json:"-"`
+	animations               map[string][]*ebiten.Image
+	currentAnimationName     string
+	currentAnimationIndex    int
+	currentAnimationDuration int
 
 	Inventory *Inventory `json:"inventory"`
 
-	OnGround bool `json:"-"`
-	Health   int  `json:"-"`
+	LooksRight bool `json:"-"`
+	OnGround   bool `json:"-"`
+	Health     int  `json:"-"`
 }
 
-func New(origin *geometry.Point, img *ebiten.Image) *Player {
+func New(origin *geometry.Point, spriteManager *sprites.Manager) (*Player, error) {
+	animations := make(map[string][]*ebiten.Image)
+
+	for anim, numAnims := range map[string]int{
+		StandingAnimation: 1,
+		RunningAnimation:  2,
+		JumpingAnimation:  1,
+		FallingAnimation:  1} {
+
+		for i := 0; i < numAnims; i++ {
+			img, err := spriteManager.GetAnimationSprite(sprites.Player, fmt.Sprintf("%s_%d", anim, i))
+			if err != nil {
+				return nil, fmt.Errorf("getting sprite: %w", err)
+			}
+			animations[anim] = append(animations[anim], img)
+		}
+	}
 
 	return &Player{
 		Object: &object.Object{
@@ -33,11 +60,11 @@ func New(origin *geometry.Point, img *ebiten.Image) *Player {
 			Width:  32,
 			Height: 32,
 		},
-		Physical:  physics.NewPhysical(),
-		Image:     img,
-		Inventory: &Inventory{},
-		Health:    DefaultHealth,
-	}
+		Physical:   physics.NewPhysical(),
+		Inventory:  &Inventory{},
+		Health:     DefaultHealth,
+		animations: animations,
+	}, nil
 }
 
 func (p *Player) IsDead() bool {
@@ -51,4 +78,34 @@ func (p *Player) Type() object.Type {
 func (p *Player) Collect(it *item.Item) {
 	it.Collected = true
 	p.Inventory.Items = append(p.Inventory.Items, it)
+}
+
+func (p *Player) Image() *ebiten.Image {
+	prevAnimationName := p.currentAnimationName
+
+	if p.OnGround {
+		if p.Speed.X == 0 {
+			p.currentAnimationName = StandingAnimation
+		} else {
+			p.currentAnimationName = RunningAnimation
+		}
+	} else {
+		if p.Speed.Y <= 0 {
+			p.currentAnimationName = JumpingAnimation
+		} else {
+			p.currentAnimationName = FallingAnimation
+		}
+	}
+
+	if p.currentAnimationName != prevAnimationName {
+		p.currentAnimationIndex = 0
+		p.currentAnimationDuration = 0
+	} else if p.currentAnimationDuration >= 10 {
+		p.currentAnimationIndex = (p.currentAnimationIndex + 1) % len(p.animations[p.currentAnimationName])
+		p.currentAnimationDuration = 0
+	} else {
+		p.currentAnimationDuration += 1
+	}
+
+	return p.animations[p.currentAnimationName][p.currentAnimationIndex]
 }

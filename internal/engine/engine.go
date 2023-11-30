@@ -153,12 +153,10 @@ func New(config Config, spriteManager *sprites.Manager) (*Engine, error) {
 		return nil, fmt.Errorf("can't find player position: %w", err)
 	}
 
-	playerSprite, err := spriteManager.GetSprite(sprites.Player)
+	p, err := player.New(playerPos, spriteManager)
 	if err != nil {
-		return nil, fmt.Errorf("getting player sprite: %w", err)
+		return nil, fmt.Errorf("creating player: %w", err)
 	}
-
-	p := player.New(playerPos, playerSprite)
 
 	var items []*item.Item
 	var spikes []*damage.Spike
@@ -325,6 +323,12 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 		visible := c.Rectangle().Sub(e.Camera.Rectangle())
 		base := geometry.Origin.Add(visible)
 		op := &ebiten.DrawImageOptions{}
+
+		if c.Type() == object.PlayerType && e.Player.LooksRight {
+			op.GeoM.Scale(-1, 1)
+			op.GeoM.Translate(e.Player.Width, 0)
+		}
+
 		op.GeoM.Translate(
 			base.X,
 			base.Y,
@@ -341,7 +345,7 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 			}
 			screen.DrawImage(it.Image, op)
 		case object.PlayerType:
-			screen.DrawImage(e.Player.Image, op)
+			screen.DrawImage(e.Player.Image(), op)
 		case object.Portal:
 			p := c.(*portal.Portal)
 			screen.DrawImage(p.Image, op)
@@ -389,8 +393,10 @@ func (e *Engine) ProcessPlayerInput(inp *input.Input) {
 	switch {
 	case inp.IsKeyPressed(ebiten.KeyA):
 		e.Player.Speed.X = -2.5 * 2
+		e.Player.LooksRight = false
 	case inp.IsKeyPressed(ebiten.KeyD):
 		e.Player.Speed.X = 2.5 * 2
+		e.Player.LooksRight = true
 	default:
 		e.Player.Speed.X = 0
 	}
