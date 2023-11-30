@@ -13,8 +13,8 @@ func NewInvWall(origin *geometry.Point, width, height float64) *InvWall {
 	return &InvWall{
 		Object: &object.Object{
 			Origin: origin,
-			Width:  float64(width),
-			Height: float64(height),
+			Width:  width,
+			Height: height,
 		},
 	}
 }

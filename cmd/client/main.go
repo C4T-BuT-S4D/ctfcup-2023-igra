@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/camera"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/sprites"
 	"os/signal"
 	"syscall"
 
@@ -15,9 +13,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/camera"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/engine"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/input"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/logging"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/sprites"
 	gameserverpb "github.com/c4t-but-s4d/ctfcup-2023-igra/proto/go/gameserver"
 )
 
@@ -142,6 +142,7 @@ func main() {
 	logging.Init()
 
 	// TODO: bind to viper.
+	standalone := pflag.BoolP("standalone", "a", false, "run without server")
 	serverAddr := pflag.StringP("server", "s", "127.0.0.1:8080", "server address")
 	level := pflag.StringP("level", "l", "test", "level to load")
 	pflag.Parse()
@@ -150,7 +151,7 @@ func main() {
 	defer cancel()
 
 	var client gameserverpb.GameServerServiceClient
-	if *serverAddr != "standalone" {
+	if !*standalone {
 		conn, err := grpc.DialContext(ctx, *serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			logrus.Fatalf("Failed to connect to server: %v", err)

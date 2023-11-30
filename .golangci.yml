@@ -39,8 +39,6 @@ linters:
 linters-settings:
   unparam:
     check-exported: false
-  unused:
-    check-exported: false
   wrapcheck:
     ignoreSigs:
       - (context.Context).Err()
@@ -49,6 +47,8 @@ linters-settings:
       - WrapErrorf
       - status.Errorf(
       - status.Error(
+  exhaustive:
+    default-signifies-exhaustive: true
 
 issues:
   exclude-use-default: false

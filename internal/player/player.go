@@ -43,8 +43,8 @@ func New(origin *geometry.Point, spriteManager *sprites.Manager) (*Player, error
 		StandingAnimation: 1,
 		RunningAnimation:  2,
 		JumpingAnimation:  1,
-		FallingAnimation:  1} {
-
+		FallingAnimation:  1,
+	} {
 		for i := 0; i < numAnims; i++ {
 			img, err := spriteManager.GetAnimationSprite(sprites.Player, fmt.Sprintf("%s_%d", anim, i))
 			if err != nil {
@@ -97,14 +97,15 @@ func (p *Player) Image() *ebiten.Image {
 		}
 	}
 
-	if p.currentAnimationName != prevAnimationName {
+	switch {
+	case p.currentAnimationName != prevAnimationName:
 		p.currentAnimationIndex = 0
 		p.currentAnimationDuration = 0
-	} else if p.currentAnimationDuration >= 10 {
+	case p.currentAnimationDuration >= 10:
 		p.currentAnimationIndex = (p.currentAnimationIndex + 1) % len(p.animations[p.currentAnimationName])
 		p.currentAnimationDuration = 0
-	} else {
-		p.currentAnimationDuration += 1
+	default:
+		p.currentAnimationDuration++
 	}
 
 	return p.animations[p.currentAnimationName][p.currentAnimationIndex]

@@ -12,26 +12,25 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/camera"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/damage"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/portal"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/sprites"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/wall"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/samber/lo"
-
 	"github.com/Rulox/ebitmx"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/salviati/go-tmx/tmx"
+	"github.com/samber/lo"
 
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/camera"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/damage"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/geometry"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/input"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/item"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/object"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/physics"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/player"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/portal"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/resources"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/sprites"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/tiles"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/wall"
 	gameserverpb "github.com/c4t-but-s4d/ctfcup-2023-igra/proto/go/gameserver"
 
 	// Register png codec.
@@ -352,6 +351,8 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 		case object.Spike:
 			d := c.(*damage.Spike)
 			screen.DrawImage(d.Image, op)
+		default:
+			// not an item.
 		}
 	}
 }

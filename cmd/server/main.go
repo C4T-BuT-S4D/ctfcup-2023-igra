@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/sprites"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -19,6 +18,7 @@ import (
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/engine"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/logging"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/server"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/sprites"
 	gameserverpb "github.com/c4t-but-s4d/ctfcup-2023-igra/proto/go/gameserver"
 )
 

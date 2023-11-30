@@ -1,8 +1,6 @@
 package physics
 
-import (
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/geometry"
-)
+import "github.com/c4t-but-s4d/ctfcup-2023-igra/internal/geometry"
 
 type Physical struct {
 	Speed        *geometry.Vector

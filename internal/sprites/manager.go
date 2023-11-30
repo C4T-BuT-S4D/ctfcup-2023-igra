@@ -2,13 +2,14 @@ package sprites
 
 import (
 	"fmt"
+	// Register PNG decoder.
+	_ "image/png"
 	"sync"
 
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/resources"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 
-	_ "image/png"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/resources"
 )
 
 type Manager struct {

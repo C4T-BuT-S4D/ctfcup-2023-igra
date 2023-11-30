@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/camera"
 	"image/color"
 	"sync"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/sirupsen/logrus"
 
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/camera"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/engine"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/input"
 	gameserverpb "github.com/c4t-but-s4d/ctfcup-2023-igra/proto/go/gameserver"
