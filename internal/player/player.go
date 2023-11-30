@@ -22,7 +22,7 @@ type Player struct {
 	Inventory *Inventory `json:"inventory"`
 
 	OnGround bool `json:"-"`
-	Health   int  `json:"health"`
+	Health   int  `json:"-"`
 }
 
 func New(origin *geometry.Point, img *ebiten.Image) *Player {

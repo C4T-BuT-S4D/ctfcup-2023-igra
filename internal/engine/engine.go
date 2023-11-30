@@ -6,17 +6,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/camera"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/damage"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/portal"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/sprites"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/samber/lo"
 	"image"
 	"image/color"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/camera"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/damage"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/portal"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/sprites"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/wall"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/samber/lo"
 
 	"github.com/Rulox/ebitmx"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -44,16 +46,16 @@ type Config struct {
 }
 
 type Engine struct {
-	Tiles   []*tiles.StaticTile `json:"-"`
-	Camera  *camera.Camera      `json:"-"`
-	Player  *player.Player      `json:"player"`
-	Items   []*item.Item        `json:"items"`
-	Portals []*portal.Portal    `json:"-"`
-	Spikes  []*damage.Spike     `json:"-"`
+	Tiles    []*tiles.StaticTile `json:"-"`
+	Camera   *camera.Camera      `json:"-"`
+	Player   *player.Player      `json:"player"`
+	Items    []*item.Item        `json:"items"`
+	Portals  []*portal.Portal    `json:"-"`
+	Spikes   []*damage.Spike     `json:"-"`
+	InvWalls []*wall.InvWall     `json:"-"`
 
-	StartSnapshot  *Snapshot `json:"-"`
-	snapshotsDir   string
-	spritesManager *sprites.Manager
+	StartSnapshot *Snapshot `json:"-"`
+	snapshotsDir  string
 }
 
 func getProperties(o *tmx.Object) map[string]string {
@@ -69,7 +71,7 @@ var ErrNoPlayerSpawn = errors.New("no player spawn found")
 func findPlayerSpawn(tileMap *tmx.Map) (*geometry.Point, error) {
 	for _, og := range tileMap.ObjectGroups {
 		for _, o := range og.Objects {
-			if getProperties(&o)["type"] == "player_spawn" {
+			if o.Type == "player_spawn" {
 				return &geometry.Point{
 					X: o.X,
 					Y: o.Y,
@@ -160,13 +162,13 @@ func New(config Config, spriteManager *sprites.Manager) (*Engine, error) {
 
 	var items []*item.Item
 	var spikes []*damage.Spike
+	var invwalls []*wall.InvWall
 	portalsMap := make(map[string]*portal.Portal)
 
 	for _, og := range testMap.ObjectGroups {
 		for _, o := range og.Objects {
 			props := getProperties(&o)
-			objectType := props["type"]
-			switch objectType {
+			switch o.Type {
 			case "item":
 				items = append(items, item.New(
 					&geometry.Point{
@@ -203,6 +205,13 @@ func New(config Config, spriteManager *sprites.Manager) (*Engine, error) {
 					o.Width,
 					o.Height,
 				))
+			case "invwall":
+				invwalls = append(invwalls, wall.NewInvWall(&geometry.Point{
+					X: o.X,
+					Y: o.Y,
+				},
+					o.Width,
+					o.Height))
 			}
 		}
 	}
@@ -238,6 +247,7 @@ func New(config Config, spriteManager *sprites.Manager) (*Engine, error) {
 		Items:        items,
 		Portals:      lo.Values(portalsMap),
 		Spikes:       spikes,
+		InvWalls:     invwalls,
 		snapshotsDir: config.SnapshotsDir,
 	}, nil
 }
@@ -392,7 +402,7 @@ func (e *Engine) AlignPlayerX() {
 	var pv *geometry.Vector
 
 	for _, c := range e.Collisions(e.Player.Rectangle()) {
-		if c.Type() != object.StaticTileType {
+		if c.Type() != object.StaticTileType && c.Type() != object.InvWall {
 			continue
 		}
 
@@ -411,7 +421,7 @@ func (e *Engine) AlignPlayerY() {
 	var pv *geometry.Vector
 
 	for _, c := range e.Collisions(e.Player.Rectangle()) {
-		if c.Type() != object.StaticTileType {
+		if c.Type() != object.StaticTileType && c.Type() != object.InvWall {
 			continue
 		}
 

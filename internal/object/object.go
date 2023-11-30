@@ -10,6 +10,7 @@ const (
 	Item
 	Portal
 	Spike
+	InvWall
 )
 
 func (t Type) String() string {
