@@ -32,7 +32,7 @@ func main() {
 	listen := pflag.StringP("listen", "s", ":8080", "address to listen on")
 	level := pflag.StringP("level", "l", "", "level to load")
 	snapshotsDir := pflag.String("snapshots-dir", "snapshots", "directory to save snapshots to")
-	enableGui := pflag.BoolP("gui", "g", false, "enable gui")
+	headless := pflag.BoolP("headless", "h", false, "disable GUI")
 	pflag.Parse()
 
 	game := server.NewGame(*snapshotsDir)
@@ -100,7 +100,11 @@ func main() {
 	defer cancel()
 	go func() {
 		<-ctx.Done()
-		logrus.Infof("stopping server")
+
+		logrus.Info("stopping game")
+		game.Shutdown()
+
+		logrus.Info("stopping server")
 
 		shutdownCtx, shutdownCancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 		defer shutdownCancel()
@@ -113,13 +117,15 @@ func main() {
 	ebiten.SetWindowTitle("ctfcup-2023-igra server")
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeOnlyFullscreenEnabled)
 
-	if *enableGui {
-		logrus.Info("starting game")
-		if err := ebiten.RunGame(game); err != nil {
-			logrus.Fatalf("failed to run game: %v", err)
-		}
-	} else {
+	if *headless {
 		logrus.Info("running in headless mode")
 		<-ctx.Done()
+	} else {
+		logrus.Info("starting game")
+		if err := ebiten.RunGame(game); err != nil && !errors.Is(err, server.ErrGameShutdown) {
+			logrus.Fatalf("failed to run game: %v", err)
+		}
 	}
+
+	logrus.Info("finished")
 }

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"image/color"
 	"sync"
@@ -15,16 +16,22 @@ import (
 	gameserverpb "github.com/c4t-but-s4d/ctfcup-2023-igra/proto/go/gameserver"
 )
 
+var ErrGameShutdown = errors.New("game is shut down")
+
 type Game struct {
 	engine *engine.Engine
 
 	lock sync.Mutex
 
 	snapshotsDir string
+	shutdown     chan struct{}
 }
 
 func NewGame(snapshotsDir string) *Game {
-	return &Game{snapshotsDir: snapshotsDir}
+	return &Game{
+		snapshotsDir: snapshotsDir,
+		shutdown:     make(chan struct{}),
+	}
 }
 
 func (g *Game) processEvent(event *gameserverpb.ClientEvent) error {
@@ -76,7 +83,12 @@ func (g *Game) resetEngine() {
 
 // Update doesn't do anything, because the game state is updated by the server.
 func (g *Game) Update() error {
-	return nil
+	select {
+	case <-g.shutdown:
+		return ErrGameShutdown
+	default:
+		return nil
+	}
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
@@ -94,4 +106,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 func (g *Game) Layout(_, _ int) (screenWidth, screenHeight int) {
 	return camera.WIDTH, camera.HEIGHT
+}
+
+func (g *Game) Shutdown() {
+	close(g.shutdown)
 }
