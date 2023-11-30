@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	mu "github.com/c4t-but-s4d/cbs-go/multiproto"
 	"github.com/hajimehoshi/ebiten/v2"
@@ -29,6 +32,7 @@ func main() {
 	listen := pflag.StringP("listen", "s", ":8080", "address to listen on")
 	level := pflag.StringP("level", "l", "", "level to load")
 	snapshotsDir := pflag.String("snapshots-dir", "snapshots", "directory to save snapshots to")
+	enableGui := pflag.BoolP("gui", "g", false, "enable gui")
 	pflag.Parse()
 
 	game := server.NewGame(*snapshotsDir)
@@ -92,11 +96,30 @@ func main() {
 		}
 	}()
 
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+	go func() {
+		<-ctx.Done()
+		logrus.Infof("stopping server")
+
+		shutdownCtx, shutdownCancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+		defer shutdownCancel()
+
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
+			logrus.Fatalf("error stopping http server: %v", err)
+		}
+	}()
+
 	ebiten.SetWindowTitle("ctfcup-2023-igra server")
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeOnlyFullscreenEnabled)
 
-	logrus.Infof("starting game")
-	if err := ebiten.RunGame(game); err != nil {
-		logrus.Fatalf("failed to run game: %v", err)
+	if *enableGui {
+		logrus.Info("starting game")
+		if err := ebiten.RunGame(game); err != nil {
+			logrus.Fatalf("failed to run game: %v", err)
+		}
+	} else {
+		logrus.Info("running in headless mode")
+		<-ctx.Done()
 	}
 }
