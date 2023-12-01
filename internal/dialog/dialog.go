@@ -1,7 +1,5 @@
 package dialog
 
-//type
-
 type State struct {
 	Finished bool
 	GaveItem bool

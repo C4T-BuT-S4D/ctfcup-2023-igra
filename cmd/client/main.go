@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/fonts"
 	"os/signal"
 	"syscall"
 
@@ -16,6 +15,7 @@ import (
 
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/camera"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/engine"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/fonts"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/input"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/logging"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/sprites"

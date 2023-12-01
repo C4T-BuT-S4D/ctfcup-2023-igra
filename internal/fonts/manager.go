@@ -2,10 +2,12 @@ package fonts
 
 import (
 	"fmt"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/resources"
+	"sync"
+
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
-	"sync"
+
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/resources"
 )
 
 type Manager struct {

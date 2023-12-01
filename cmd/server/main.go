@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/fonts"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,6 +19,7 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/engine"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/fonts"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/logging"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/server"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/sprites"
