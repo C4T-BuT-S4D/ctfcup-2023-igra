@@ -7,6 +7,15 @@ type Rectangle struct {
 	BottomY float64
 }
 
+func (a *Rectangle) Extended(delta float64) *Rectangle {
+	return &Rectangle{
+		LeftX:   a.LeftX - delta,
+		TopY:    a.TopY - delta,
+		RightX:  a.RightX + delta,
+		BottomY: a.BottomY + delta,
+	}
+}
+
 func (a *Rectangle) AddVector(other *Vector) *Rectangle {
 	return &Rectangle{
 		LeftX:   a.LeftX + other.X,

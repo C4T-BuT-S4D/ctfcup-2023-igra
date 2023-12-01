@@ -37,11 +37,15 @@ func (m *Manager) Get(t Type) font.Face {
 		panic(err)
 	}
 
-	face, err := opentype.NewFace(ff, &opentype.FaceOptions{
+	opts := &opentype.FaceOptions{
 		Size:    72,
 		DPI:     72,
 		Hinting: font.HintingFull,
-	})
+	}
+	if t == Dialog {
+		opts.Size = 32
+	}
+	face, err := opentype.NewFace(ff, opts)
 	if err != nil {
 		panic(err)
 	}

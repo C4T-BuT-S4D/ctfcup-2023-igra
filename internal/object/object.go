@@ -11,6 +11,7 @@ const (
 	Portal
 	Spike
 	InvWall
+	NPC
 )
 
 func (t Type) String() string {

@@ -42,5 +42,11 @@ func (e *Engine) Collisions(r *geometry.Rectangle) []object.GenericObject {
 		}
 	}
 
+	for _, t := range e.NPCs {
+		if t.Rectangle().Intersects(r) {
+			result = append(result, t)
+		}
+	}
+
 	return result
 }

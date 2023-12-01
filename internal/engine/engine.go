@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/dialog"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/fonts"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/npc"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"golang.org/x/image/font"
 	"image"
@@ -55,12 +57,14 @@ type Engine struct {
 	Portals  []*portal.Portal    `json:"-" msgpack:"portals"`
 	Spikes   []*damage.Spike     `json:"-" msgpack:"spikes"`
 	InvWalls []*wall.InvWall     `json:"-" msgpack:"invWalls"`
+	NPCs     []*npc.NPC          `json:"-" msgpack:"npcs"`
 
 	StartSnapshot *Snapshot `json:"-" msgpack:"-"`
 
 	fontsManager *fonts.Manager
 	snapshotsDir string
 	playerSpawn  *geometry.Point
+	activeNPC    *npc.NPC
 }
 
 func getProperties(o *tmx.Object) map[string]string {
@@ -166,6 +170,7 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 	var items []*item.Item
 	var spikes []*damage.Spike
 	var invwalls []*wall.InvWall
+	var npcs []*npc.NPC
 	portalsMap := make(map[string]*portal.Portal)
 
 	for _, og := range testMap.ObjectGroups {
@@ -215,6 +220,21 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 				},
 					o.Width,
 					o.Height))
+			case "npc":
+				img, err := spriteManager.GetSprite(sprites.Slon)
+				if err != nil {
+					return nil, fmt.Errorf("getting spike sprite: %w", err)
+				}
+				npcs = append(npcs, npc.New(
+					&geometry.Point{
+						X: o.X,
+						Y: o.Y,
+					},
+					img,
+					o.Width,
+					o.Height,
+					dialog.NewDummy("Hello, I'm SLONIK!pröööh об этом"),
+				))
 			}
 		}
 	}
@@ -258,6 +278,7 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 		Portals:      portals,
 		Spikes:       spikes,
 		InvWalls:     invwalls,
+		NPCs:         npcs,
 		fontsManager: fontsManager,
 		snapshotsDir: config.SnapshotsDir,
 		playerSpawn:  playerPos,
@@ -299,6 +320,7 @@ func (s *Snapshot) ToProto() *gameserverpb.EngineSnapshot {
 func (e *Engine) Reset() {
 	e.Player.MoveTo(e.playerSpawn)
 	e.Player.Health = player.DefaultHealth
+	e.activeNPC = nil
 }
 
 func (e *Engine) MakeSnapshot() (*Snapshot, error) {
@@ -371,9 +393,23 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 		case object.Spike:
 			d := c.(*damage.Spike)
 			screen.DrawImage(d.Image, op)
+		case object.NPC:
+			n := c.(*npc.NPC)
+			screen.DrawImage(n.Image, op)
 		default:
 			// not an item.
 		}
+	}
+
+	if e.activeNPC != nil {
+		// Draw "YOU DIED" text over all screen using red color.
+		face := e.fontsManager.Get(fonts.Dialog)
+		redColor := color.RGBA{R: 0, G: 255, B: 0, A: 255}
+
+		txt := e.activeNPC.Dialog.State().Text
+		width := font.MeasureString(face, txt)
+
+		text.Draw(screen, txt, face, camera.WIDTH/2-width.Floor()/2, camera.HEIGHT/2, redColor)
 	}
 }
 
@@ -387,6 +423,15 @@ func (e *Engine) Update(inp *input.Input) error {
 		return nil
 	}
 
+	if e.activeNPC != nil {
+		if inp.IsKeyNewlyPressed(ebiten.KeyEscape) {
+			e.activeNPC = nil
+			return nil
+		}
+
+		return nil
+	}
+
 	e.ProcessPlayerInput(inp)
 	e.Player.Move(&geometry.Vector{X: e.Player.Speed.X, Y: 0})
 	e.AlignPlayerX()
@@ -397,6 +442,14 @@ func (e *Engine) Update(inp *input.Input) error {
 	if err := e.CollectItems(); err != nil {
 		return fmt.Errorf("collecting items: %w", err)
 	}
+
+	availableNPC := e.CheckNPCClose()
+	if availableNPC != nil && inp.IsKeyNewlyPressed(ebiten.KeyE) {
+		e.activeNPC = availableNPC
+		e.activeNPC.Dialog.Greeting()
+		return nil
+	}
+
 	e.Camera.MoveTo(e.Player.Origin.Add(&geometry.Vector{
 		X: -camera.WIDTH/2 + e.Player.Width/2,
 		Y: -camera.HEIGHT/2 + e.Player.Height/2,
@@ -531,6 +584,19 @@ func (e *Engine) CheckSpikes() {
 		s := c.(*damage.Spike)
 		e.Player.Health -= s.Damage
 	}
+}
+
+func (e *Engine) CheckNPCClose() *npc.NPC {
+	for _, c := range e.Collisions(e.Player.Rectangle().Extended(40)) {
+		if c.Type() != object.NPC {
+			continue
+		}
+
+		n := c.(*npc.NPC)
+		return n
+	}
+
+	return nil
 }
 
 func (e *Engine) Checksum() (string, error) {
