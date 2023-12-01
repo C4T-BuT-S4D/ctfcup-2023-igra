@@ -13,8 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"slices"
-
 	"github.com/Rulox/ebitmx"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text"
@@ -22,6 +20,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/vmihailenco/msgpack/v5"
 	"golang.org/x/image/font"
+	"slices"
 
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/camera"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/damage"
@@ -282,7 +281,7 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 
 	keys := lo.Keys(portalsMap)
 	slices.Sort(keys)
-	var portals []*portal.Portal
+	portals := make([]*portal.Portal, 0, len(keys))
 	for _, key := range keys {
 		portals = append(portals, portalsMap[key])
 	}
@@ -470,7 +469,7 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 }
 
 func (e *Engine) Update(inp *input.Input) error {
-	e.Tick += 1
+	e.Tick++
 
 	if e.Paused {
 		if inp.IsKeyNewlyPressed(ebiten.KeyP) {
