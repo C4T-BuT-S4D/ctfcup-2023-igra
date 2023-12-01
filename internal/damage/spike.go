@@ -11,7 +11,7 @@ type Spike struct {
 	*object.Object
 	Damageable
 
-	Image *ebiten.Image `json:"-"`
+	Image *ebiten.Image `msgpack:"-"`
 }
 
 func (s *Spike) Type() object.Type {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/fonts"
 	"net/http"
 	"os"
 	"os/signal"
@@ -37,6 +38,7 @@ func main() {
 
 	game := server.NewGame(*snapshotsDir)
 	smng := sprites.NewManager()
+	fntmng := fonts.NewManager()
 
 	gs := server.New(game, func() (*engine.Engine, error) {
 		files, err := os.ReadDir(*snapshotsDir)
@@ -65,14 +67,14 @@ func main() {
 				return nil, fmt.Errorf("reading snapshot file: %w", err)
 			}
 
-			e, err := engine.NewFromSnapshot(engineConfig, &engine.Snapshot{Data: data}, smng)
+			e, err := engine.NewFromSnapshot(engineConfig, &engine.Snapshot{Data: data}, smng, fntmng)
 			if err != nil {
 				return nil, fmt.Errorf("creating engine from snapshot: %w", err)
 			}
 			return e, nil
 		}
 
-		e, err := engine.New(engineConfig, smng)
+		e, err := engine.New(engineConfig, smng, fntmng)
 		if err != nil {
 			return nil, fmt.Errorf("creating engine without snapshot: %w", err)
 		}

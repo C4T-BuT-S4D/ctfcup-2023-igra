@@ -6,18 +6,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/fonts"
+	"github.com/hajimehoshi/ebiten/v2/text"
+	"golang.org/x/image/font"
 	"image"
 	"image/color"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/Rulox/ebitmx"
-	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/salviati/go-tmx/tmx"
-	"github.com/samber/lo"
-
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/camera"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/damage"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/geometry"
@@ -32,6 +31,10 @@ import (
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/tiles"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/wall"
 	gameserverpb "github.com/c4t-but-s4d/ctfcup-2023-igra/proto/go/gameserver"
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/salviati/go-tmx/tmx"
+	"github.com/samber/lo"
+	"github.com/vmihailenco/msgpack/v5"
 
 	// Register png codec.
 	_ "image/png"
@@ -45,16 +48,19 @@ type Config struct {
 }
 
 type Engine struct {
-	Tiles    []*tiles.StaticTile `json:"-"`
-	Camera   *camera.Camera      `json:"-"`
-	Player   *player.Player      `json:"player"`
-	Items    []*item.Item        `json:"items"`
-	Portals  []*portal.Portal    `json:"-"`
-	Spikes   []*damage.Spike     `json:"-"`
-	InvWalls []*wall.InvWall     `json:"-"`
+	Tiles    []*tiles.StaticTile `json:"-" msgpack:"-"`
+	Camera   *camera.Camera      `json:"-" msgpack:"camera"`
+	Player   *player.Player      `json:"player" msgpack:"player"`
+	Items    []*item.Item        `json:"items" msgpack:"items"`
+	Portals  []*portal.Portal    `json:"-" msgpack:"portals"`
+	Spikes   []*damage.Spike     `json:"-" msgpack:"spikes"`
+	InvWalls []*wall.InvWall     `json:"-" msgpack:"invWalls"`
 
-	StartSnapshot *Snapshot `json:"-"`
-	snapshotsDir  string
+	StartSnapshot *Snapshot `json:"-" msgpack:"-"`
+
+	fontsManager *fonts.Manager
+	snapshotsDir string
+	playerSpawn  *geometry.Point
 }
 
 func getProperties(o *tmx.Object) map[string]string {
@@ -92,7 +98,7 @@ func getTileImgByID(tileID tmx.ID, tileSet *ebitmx.EbitenTileset, img *ebiten.Im
 	return img.SubImage(image.Rect(x0, y0, x1, y1)).(*ebiten.Image)
 }
 
-func New(config Config, spriteManager *sprites.Manager) (*Engine, error) {
+func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Manager) (*Engine, error) {
 	var resultImage *ebiten.Image
 	imgFile, err := resources.EmbeddedFS.Open("tiles/result.png")
 	if err != nil {
@@ -237,20 +243,29 @@ func New(config Config, spriteManager *sprites.Manager) (*Engine, error) {
 		},
 	}
 
+	keys := lo.Keys(portalsMap)
+	slices.Sort(keys)
+	var portals []*portal.Portal
+	for _, key := range keys {
+		portals = append(portals, portalsMap[key])
+	}
+
 	return &Engine{
 		Tiles:        mapTiles,
 		Camera:       cam,
 		Player:       p,
 		Items:        items,
-		Portals:      lo.Values(portalsMap),
+		Portals:      portals,
 		Spikes:       spikes,
 		InvWalls:     invwalls,
+		fontsManager: fontsManager,
 		snapshotsDir: config.SnapshotsDir,
+		playerSpawn:  playerPos,
 	}, nil
 }
 
-func NewFromSnapshot(config Config, snapshot *Snapshot, spritesManager *sprites.Manager) (*Engine, error) {
-	e, err := New(config, spritesManager)
+func NewFromSnapshot(config Config, snapshot *Snapshot, spritesManager *sprites.Manager, fontsManager *fonts.Manager) (*Engine, error) {
+	e, err := New(config, spritesManager, fontsManager)
 	if err != nil {
 		return nil, fmt.Errorf("creating engine: %w", err)
 	}
@@ -281,6 +296,11 @@ func (s *Snapshot) ToProto() *gameserverpb.EngineSnapshot {
 	}
 }
 
+func (e *Engine) Reset() {
+	e.Player.MoveTo(e.playerSpawn)
+	e.Player.Health = player.DefaultHealth
+}
+
 func (e *Engine) MakeSnapshot() (*Snapshot, error) {
 	data, err := json.Marshal(e)
 	if err != nil {
@@ -309,12 +329,12 @@ func (e *Engine) SaveSnapshot(snapshot *Snapshot) error {
 func (e *Engine) Draw(screen *ebiten.Image) {
 	if e.Player.IsDead() {
 		// Draw "YOU DIED" text over all screen using red color.
-		img := ebiten.NewImageFromImage(screen)
-		img.Fill(color.RGBA{0x80, 0x80, 0x80, 0xff})
-		text := "YOU DIED"
+		face := e.fontsManager.Get(fonts.DSouls)
+		redColor := color.RGBA{R: 255, G: 0, B: 0, A: 255}
 
-		ebitenutil.DebugPrintAt(img, text, 0, 0)
-		screen.DrawImage(img, nil)
+		width := font.MeasureString(face, "YOU DIED")
+
+		text.Draw(screen, "YOU DIED", face, camera.WIDTH/2-width.Floor()/2, camera.HEIGHT/2, redColor)
 		return
 	}
 
@@ -358,6 +378,11 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 }
 
 func (e *Engine) Update(inp *input.Input) error {
+	if inp.IsKeyNewlyPressed(ebiten.KeyR) {
+		e.Reset()
+		return nil
+	}
+
 	if e.Player.IsDead() {
 		return nil
 	}
@@ -509,17 +534,17 @@ func (e *Engine) CheckSpikes() {
 }
 
 func (e *Engine) Checksum() (string, error) {
-	snapshot, err := e.MakeSnapshot()
+	b, err := msgpack.Marshal(e)
 	if err != nil {
-		return "", fmt.Errorf("making snapshot: %w", err)
+		return "", fmt.Errorf("marshalling engine: %w", err)
 	}
 
 	hash := sha256.New()
-	if _, err := hash.Write(snapshot.Data); err != nil {
+	if _, err := hash.Write(b); err != nil {
 		return "", fmt.Errorf("hashing snapshot: %w", err)
 	}
 
-	return hex.EncodeToString(hash.Sum(snapshot.Data)), nil
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
 var ErrInvalidChecksum = errors.New("invalid checksum")

@@ -306,7 +306,7 @@
 </data>
  </layer>
  <objectgroup id="2" name="objects">
-  <object id="3" type="player_spawn" x="608" y="576">
+  <object id="3" type="player_spawn" x="640" y="576">
    <point/>
   </object>
   <object id="5" name="lobby-speedrun" type="portal" x="384" y="512" width="32" height="32">
@@ -339,7 +339,7 @@
     <property name="task-id" value="some-task-id"/>
    </properties>
   </object>
-  <object id="12" type="item" x="5920" y="1856" width="32" height="32">
+  <object id="12" name="someone12469 boots" type="item" x="5920" y="1856" width="32" height="32">
    <properties>
     <property name="item" value="someone12469 boots"/>
    </properties>

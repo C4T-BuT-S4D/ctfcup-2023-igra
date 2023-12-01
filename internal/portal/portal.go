@@ -11,7 +11,7 @@ import (
 
 type Portal struct {
 	*object.Object
-	Image      *ebiten.Image
+	Image      *ebiten.Image `msgpack:"-"`
 	PortalTo   string
 	TeleportTo *geometry.Point
 }

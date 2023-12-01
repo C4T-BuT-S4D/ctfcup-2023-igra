@@ -12,7 +12,7 @@ import (
 type Item struct {
 	*object.Object `json:"-"`
 
-	Image *ebiten.Image `json:"-"`
+	Image *ebiten.Image `json:"-" msgpack:"-"`
 
 	Name      string `json:"name"`
 	Important bool   `json:"important"`
