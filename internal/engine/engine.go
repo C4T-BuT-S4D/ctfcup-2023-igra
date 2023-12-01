@@ -6,17 +6,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/dialog"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/fonts"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/npc"
-	"github.com/hajimehoshi/ebiten/v2/text"
-	"golang.org/x/image/font"
 	"image"
 	"image/color"
 	"os"
 	"path/filepath"
 	"slices"
 	"time"
+
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/dialog"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/fonts"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/npc"
+	"github.com/hajimehoshi/ebiten/v2/text"
+	"golang.org/x/image/font"
 
 	"github.com/Rulox/ebitmx"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/camera"
@@ -65,6 +66,8 @@ type Engine struct {
 	snapshotsDir string
 	playerSpawn  *geometry.Point
 	activeNPC    *npc.NPC
+	Paused       bool `msgpack:"paused"`
+	Tick         int  `msgpack:"tick"`
 }
 
 func getProperties(o *tmx.Object) map[string]string {
@@ -321,6 +324,7 @@ func (e *Engine) Reset() {
 	e.Player.MoveTo(e.playerSpawn)
 	e.Player.Health = player.DefaultHealth
 	e.activeNPC = nil
+	e.Tick = 0
 }
 
 func (e *Engine) MakeSnapshot() (*Snapshot, error) {
@@ -414,6 +418,19 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 }
 
 func (e *Engine) Update(inp *input.Input) error {
+	e.Tick += 1
+
+	if e.Paused {
+		if inp.IsKeyNewlyPressed(ebiten.KeyP) {
+			e.Paused = false
+		} else {
+			return nil
+		}
+	} else if inp.IsKeyNewlyPressed(ebiten.KeyP) {
+		e.Paused = true
+		e.Player.Speed = &geometry.Vector{}
+	}
+
 	if inp.IsKeyNewlyPressed(ebiten.KeyR) {
 		e.Reset()
 		return nil
