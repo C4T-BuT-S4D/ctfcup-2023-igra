@@ -16,7 +16,7 @@ func (d *dummyDialog) Greeting() {
 }
 
 func (d *dummyDialog) Feed(text string) {
-	d.s.Text += fmt.Sprintf("\nYou said: %s\n", text)
+	d.s.Text += fmt.Sprintf("\nYou said: %s", text)
 }
 
 func (d *dummyDialog) State() State {

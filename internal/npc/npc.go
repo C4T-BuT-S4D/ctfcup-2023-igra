@@ -10,22 +10,24 @@ import (
 
 type NPC struct {
 	*object.Object
-	Dialog dialog.Dialog
-	Image  *ebiten.Image `msgpack:"-"`
+	Dialog      dialog.Dialog
+	Image       *ebiten.Image `msgpack:"-"`
+	DialogImage *ebiten.Image `msgpack:"-"`
 }
 
 func (n *NPC) Type() object.Type {
 	return object.NPC
 }
 
-func New(origin *geometry.Point, img *ebiten.Image, width, height float64, dialog dialog.Dialog) *NPC {
+func New(origin *geometry.Point, img *ebiten.Image, dialogImage *ebiten.Image, width, height float64, dialog dialog.Dialog) *NPC {
 	return &NPC{
 		Object: &object.Object{
 			Origin: origin,
 			Width:  width,
 			Height: height,
 		},
-		Image:  img,
-		Dialog: dialog,
+		Image:       img,
+		DialogImage: dialogImage,
+		Dialog:      dialog,
 	}
 }

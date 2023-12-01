@@ -19,6 +19,7 @@ var interestingKeys = []ebiten.Key{
 	ebiten.KeyEnter,
 	ebiten.KeyE,
 	ebiten.KeyP,
+	ebiten.KeyBackspace,
 }
 
 type Input struct {
@@ -67,6 +68,10 @@ func (i *Input) IsKeyPressed(key ebiten.Key) bool {
 func (i *Input) IsKeyNewlyPressed(key ebiten.Key) bool {
 	_, ok := i.newlyPressedKeys[key]
 	return ok
+}
+
+func (i *Input) JustPressedKeys() []ebiten.Key {
+	return lo.Uniq(lo.Keys(i.newlyPressedKeys))
 }
 
 func (i *Input) ToProto() *gameserverpb.ClientEvent_KeysPressed {

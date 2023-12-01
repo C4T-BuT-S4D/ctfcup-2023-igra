@@ -45,7 +45,7 @@ func (m *Manager) Get(t Type) font.Face {
 		Hinting: font.HintingFull,
 	}
 	if t == Dialog {
-		opts.Size = 32
+		opts.Size = 28
 	}
 	face, err := opentype.NewFace(ff, opts)
 	if err != nil {

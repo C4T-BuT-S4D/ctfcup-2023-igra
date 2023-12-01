@@ -334,8 +334,10 @@
     <property name="portal-to" value="lobby-task"/>
    </properties>
   </object>
-  <object id="11" name="slonser-web-task" type="npc" x="1056" y="1216" width="32" height="32">
+  <object id="11" name="slonser-web-task" type="npc" x="1024" y="1184" width="64" height="64">
    <properties>
+    <property name="dialog-sprite" value="slon_dialog"/>
+    <property name="sprite" value="slon"/>
     <property name="task-id" value="some-task-id"/>
    </properties>
   </object>

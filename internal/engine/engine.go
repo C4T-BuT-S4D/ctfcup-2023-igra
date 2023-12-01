@@ -10,6 +10,7 @@ import (
 	"image/color"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"slices"
@@ -63,12 +64,14 @@ type Engine struct {
 
 	StartSnapshot *Snapshot `json:"-" msgpack:"-"`
 
-	fontsManager *fonts.Manager
-	snapshotsDir string
-	playerSpawn  *geometry.Point
-	activeNPC    *npc.NPC
-	Paused       bool `msgpack:"paused"`
-	Tick         int  `msgpack:"tick"`
+	fontsManager      *fonts.Manager
+	snapshotsDir      string
+	playerSpawn       *geometry.Point
+	activeNPC         *npc.NPC
+	dialogInputBuffer []string
+
+	Paused bool `msgpack:"paused"`
+	Tick   int  `msgpack:"tick"`
 }
 
 func getProperties(o *tmx.Object) map[string]string {
@@ -193,11 +196,16 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 					false,
 				))
 			case "portal":
+				img, err := spriteManager.GetSprite(sprites.Portal)
+				if err != nil {
+					return nil, fmt.Errorf("getting portal sprite: %w", err)
+				}
 				portalsMap[o.Name] = portal.New(
 					&geometry.Point{
 						X: o.X,
 						Y: o.Y,
 					},
+					img,
 					o.Width,
 					o.Height,
 					props["portal-to"],
@@ -225,9 +233,13 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 					o.Width,
 					o.Height))
 			case "npc":
-				img, err := spriteManager.GetSprite(sprites.Slon)
+				img, err := spriteManager.GetSprite(sprites.Type(props["sprite"]))
 				if err != nil {
-					return nil, fmt.Errorf("getting spike sprite: %w", err)
+					return nil, fmt.Errorf("getting slon sprite: %w", err)
+				}
+				dimg, err := spriteManager.GetSprite(sprites.Type(props["dialog-sprite"]))
+				if err != nil {
+					return nil, fmt.Errorf("getting slon dialog sprite: %w", err)
 				}
 				npcs = append(npcs, npc.New(
 					&geometry.Point{
@@ -235,9 +247,10 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 						Y: o.Y,
 					},
 					img,
+					dimg,
 					o.Width,
 					o.Height,
-					dialog.NewDummy("Hello, I'm SLONIK!pröööh об этом"),
+					dialog.NewDummy("Hello, I'm SLONIK! pröööh об этом"),
 				))
 			}
 		}
@@ -353,15 +366,60 @@ func (e *Engine) SaveSnapshot(snapshot *Snapshot) error {
 	return nil
 }
 
+func (e *Engine) drawDiedScreen(screen *ebiten.Image) {
+	// Draw "YOU DIED" text over all screen using red color.
+	face := e.fontsManager.Get(fonts.DSouls)
+	redColor := color.RGBA{R: 255, G: 0, B: 0, A: 255}
+
+	width := font.MeasureString(face, "YOU DIED")
+
+	text.Draw(screen, "YOU DIED", face, camera.WIDTH/2-width.Floor()/2, camera.HEIGHT/2, redColor)
+}
+
+func (e *Engine) drawNPCDialog(screen *ebiten.Image) {
+	colorWhite := color.RGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}
+	// Draw dialog border (outer rectangle).
+	borderw, borderh := camera.WIDTH-camera.WIDTH/8, camera.HEIGHT/4
+	img := ebiten.NewImage(borderw, borderh)
+	img.Fill(colorWhite)
+	op := &ebiten.DrawImageOptions{}
+	bx, by := camera.WIDTH/16.0, camera.HEIGHT/4.0*3-camera.HEIGHT/16
+	op.GeoM.Translate(bx, by)
+	screen.DrawImage(img, op)
+
+	// Draw dialog border (inner rectangle).
+	ibw, ibh := borderw-camera.WIDTH/32, borderh-camera.HEIGHT/32
+	ibx, iby := bx+camera.WIDTH/64, by+camera.HEIGHT/64
+	img = ebiten.NewImage(ibw, ibh)
+	img.Fill(color.RGBA{R: 0, G: 0, B: 0, A: 0xff})
+	op = &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(ibx, iby)
+	screen.DrawImage(img, op)
+
+	// Draw dialog NPC image.
+	op = &ebiten.DrawImageOptions{}
+	op.GeoM.Translate(camera.WIDTH/2+camera.WIDTH/8, camera.HEIGHT/2)
+	screen.DrawImage(e.activeNPC.DialogImage, op)
+
+	// TODO(jnovikov): show only last X lines ?
+	// Draw dialog text.
+	dtx, dty := ibx+camera.WIDTH/32, iby+camera.HEIGHT/32
+	face := e.fontsManager.Get(fonts.Dialog)
+	txt := e.activeNPC.Dialog.State().Text
+	text.Draw(screen, txt, face, int(dtx), int(dty), colorWhite)
+
+	// Draw dialog input buffer.
+	if len(e.dialogInputBuffer) > 0 {
+		nLines := strings.Count(txt, "\n")
+		dtbx, dtby := dtx, dty+float64(nLines*face.Metrics().Height.Floor())+1.0*float64(face.Metrics().Height.Floor())
+		c := color.RGBA{R: 0x00, G: 0xff, B: 0xff, A: 0xff}
+		text.Draw(screen, strings.Join(e.dialogInputBuffer, ""), face, int(dtbx), int(dtby), c)
+	}
+}
+
 func (e *Engine) Draw(screen *ebiten.Image) {
 	if e.Player.IsDead() {
-		// Draw "YOU DIED" text over all screen using red color.
-		face := e.fontsManager.Get(fonts.DSouls)
-		redColor := color.RGBA{R: 255, G: 0, B: 0, A: 255}
-
-		width := font.MeasureString(face, "YOU DIED")
-
-		text.Draw(screen, "YOU DIED", face, camera.WIDTH/2-width.Floor()/2, camera.HEIGHT/2, redColor)
+		e.drawDiedScreen(screen)
 		return
 	}
 
@@ -407,14 +465,7 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 	}
 
 	if e.activeNPC != nil {
-		// Draw "YOU DIED" text over all screen using red color.
-		face := e.fontsManager.Get(fonts.Dialog)
-		redColor := color.RGBA{R: 0, G: 255, B: 0, A: 255}
-
-		txt := e.activeNPC.Dialog.State().Text
-		width := font.MeasureString(face, txt)
-
-		text.Draw(screen, txt, face, camera.WIDTH/2-width.Floor()/2, camera.HEIGHT/2, redColor)
+		e.drawNPCDialog(screen)
 	}
 }
 
@@ -444,7 +495,26 @@ func (e *Engine) Update(inp *input.Input) error {
 	if e.activeNPC != nil {
 		if inp.IsKeyNewlyPressed(ebiten.KeyEscape) {
 			e.activeNPC = nil
+			e.dialogInputBuffer = e.dialogInputBuffer[:0]
 			return nil
+		}
+		pk := inp.JustPressedKeys()
+		if len(pk) > 0 {
+			c := pk[0]
+			switch c {
+			case ebiten.KeyBackspace:
+				// backspace
+				if len(e.dialogInputBuffer) > 0 {
+					e.dialogInputBuffer = e.dialogInputBuffer[:len(e.dialogInputBuffer)-1]
+				}
+			case ebiten.KeyEnter:
+				// enter
+				e.activeNPC.Dialog.Feed(strings.Join(e.dialogInputBuffer, ""))
+				e.dialogInputBuffer = e.dialogInputBuffer[:0]
+			default:
+				// TODO(jnovikov): rework this.
+				e.dialogInputBuffer = append(e.dialogInputBuffer, c.String())
+			}
 		}
 
 		return nil
