@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"slices"
+
 	"github.com/Rulox/ebitmx"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text"
@@ -19,7 +21,6 @@ import (
 	"github.com/samber/lo"
 	"github.com/vmihailenco/msgpack/v5"
 	"golang.org/x/image/font"
-	"slices"
 
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/camera"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/damage"
@@ -119,7 +120,7 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 
 	resultImage = ebiten.NewImageFromImage(img)
 
-	mapFile, err := resources.EmbeddedFS.Open(fmt.Sprintf("tiles/%s.tmx", config.Level))
+	mapFile, err := resources.EmbeddedFS.Open(fmt.Sprintf("levels/%s.tmx", config.Level))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open map: %w", err)
 	}
