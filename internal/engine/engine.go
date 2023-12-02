@@ -19,8 +19,8 @@ import (
 	"github.com/salviati/go-tmx/tmx"
 	"github.com/samber/lo"
 	"github.com/vmihailenco/msgpack/v5"
+	"golang.org/x/exp/slices"
 	"golang.org/x/image/font"
-	"slices"
 
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/camera"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/damage"
