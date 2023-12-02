@@ -19,6 +19,9 @@ jobs:
         with:
           version: "10.0"
 
+      - name: Install deps
+        run: apt-get install -y libxrandr-dev
+
       - name: Go build
         run: go build -v ./...
 
