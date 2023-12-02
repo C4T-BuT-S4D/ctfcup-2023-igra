@@ -20,7 +20,17 @@ jobs:
           version: "10.0"
 
       - name: Install deps
-        run: sudo apt-get install -y libxrandr-dev libglx-dev
+        run: |
+          sudo apt-get install -y \
+              libc6-dev \
+              libgl1-mesa-dev \
+              libxcursor-dev \
+              libxi-dev \
+              libxinerama-dev \
+              libxrandr-dev \
+              libxxf86vm-dev \
+              libasound2-dev \
+              pkg-config
 
       - name: Go build
         run: go build -v ./...
