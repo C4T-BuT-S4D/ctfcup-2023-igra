@@ -17,3 +17,7 @@ func (v *Vector) LengthSquared() float64 {
 func (v *Vector) Length() float64 {
 	return math.Sqrt(v.LengthSquared())
 }
+
+func (v *Vector) Multiply(m float64) *Vector {
+	return &Vector{X: v.X * m, Y: v.Y * m}
+}

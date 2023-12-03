@@ -12,13 +12,14 @@ type Portal struct {
 	Image      *ebiten.Image `msgpack:"-"`
 	PortalTo   string
 	TeleportTo *geometry.Point
+	Boss       string
 }
 
 func (p *Portal) Type() object.Type {
 	return object.Portal
 }
 
-func New(origin *geometry.Point, img *ebiten.Image, width, height float64, portalTo string, teleportTo *geometry.Point) *Portal {
+func New(origin *geometry.Point, img *ebiten.Image, width, height float64, portalTo string, teleportTo *geometry.Point, boss string) *Portal {
 	return &Portal{
 		Object: &object.Object{
 			Origin: origin,
@@ -28,5 +29,6 @@ func New(origin *geometry.Point, img *ebiten.Image, width, height float64, porta
 		PortalTo:   portalTo,
 		TeleportTo: teleportTo,
 		Image:      img,
+		Boss:       boss,
 	}
 }

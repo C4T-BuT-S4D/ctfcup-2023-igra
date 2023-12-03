@@ -12,6 +12,8 @@ const (
 	Spike
 	InvWall
 	NPC
+	BossV1
+	EnemyBullet
 )
 
 func (t Type) String() string {

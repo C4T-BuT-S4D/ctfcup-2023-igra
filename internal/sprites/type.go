@@ -8,4 +8,6 @@ const (
 	Slon       Type = "slon"
 	SlonDialog Type = "slon_dialog"
 	Portal     Type = "portal"
+	BossV1     Type = "boss_v1"
+	Bullet     Type = "bullet"
 )

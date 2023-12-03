@@ -10,6 +10,7 @@ import (
 	"image/color"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,6 +23,7 @@ import (
 	"golang.org/x/exp/slices"
 	"golang.org/x/image/font"
 
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/boss"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/camera"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/damage"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/dialog"
@@ -52,14 +54,19 @@ type Config struct {
 }
 
 type Engine struct {
-	Tiles    []*tiles.StaticTile `json:"-" msgpack:"-"`
-	Camera   *camera.Camera      `json:"-" msgpack:"camera"`
-	Player   *player.Player      `json:"player" msgpack:"player"`
-	Items    []*item.Item        `json:"items" msgpack:"items"`
-	Portals  []*portal.Portal    `json:"-" msgpack:"portals"`
-	Spikes   []*damage.Spike     `json:"-" msgpack:"spikes"`
-	InvWalls []*wall.InvWall     `json:"-" msgpack:"invWalls"`
-	NPCs     []*npc.NPC          `json:"-" msgpack:"npcs"`
+	Tiles        []*tiles.StaticTile `json:"-" msgpack:"-"`
+	Camera       *camera.Camera      `json:"-" msgpack:"camera"`
+	Player       *player.Player      `json:"player" msgpack:"player"`
+	Items        []*item.Item        `json:"items" msgpack:"items"`
+	Portals      []*portal.Portal    `json:"-" msgpack:"portals"`
+	Spikes       []*damage.Spike     `json:"-" msgpack:"spikes"`
+	InvWalls     []*wall.InvWall     `json:"-" msgpack:"invWalls"`
+	NPCs         []*npc.NPC          `json:"-" msgpack:"npcs"`
+	BossV1       *boss.V1            `json:"-" msgpack:"-"`
+	EnemyBullets []*damage.Bullet    `json:"-" msgpack:"-"`
+
+	BossV1Pos     *geometry.Point `json:"-" msgpack:"-"`
+	EnteredBossV1 bool            `json:"-" msgpack:"-"`
 
 	StartSnapshot *Snapshot `json:"-" msgpack:"-"`
 
@@ -177,6 +184,7 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 	var spikes []*damage.Spike
 	var invwalls []*wall.InvWall
 	var npcs []*npc.NPC
+	var bossV1 *boss.V1
 	portalsMap := make(map[string]*portal.Portal)
 
 	for _, og := range testMap.ObjectGroups {
@@ -192,7 +200,7 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 					o.Width,
 					o.Height,
 					o.Name,
-					false,
+					props["important"] == "true",
 				))
 			case "portal":
 				img, err := spriteManager.GetSprite(sprites.Portal)
@@ -208,7 +216,8 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 					o.Width,
 					o.Height,
 					props["portal-to"],
-					nil)
+					nil,
+					props["boss"])
 			case "spike":
 				img, err := spriteManager.GetSprite(sprites.Spike)
 				if err != nil {
@@ -251,9 +260,31 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 					o.Height,
 					dialog.NewDummy("Hello, I'm SLONIK! pröööh об этом"),
 				))
+			case "boss-v1":
+				img, err := spriteManager.GetSprite(sprites.BossV1)
+				if err != nil {
+					return nil, fmt.Errorf("getting boss v1 sprite: %w", err)
+				}
+				bulletImg, err := spriteManager.GetSprite(sprites.Bullet)
+				if err != nil {
+					return nil, fmt.Errorf("getting bullet sprite: %w", err)
+				}
+				speed, err := strconv.ParseFloat(props["speed"], 64)
+				if err != nil {
+					return nil, fmt.Errorf("getting boss speed: %w", err)
+				}
+				length, err := strconv.ParseFloat(props["length"], 64)
+				if err != nil {
+					return nil, fmt.Errorf("getting boss length: %w", err)
+				}
+				bossV1 = boss.NewV1(&geometry.Point{
+					X: o.X,
+					Y: o.Y,
+				}, img, bulletImg, speed, length)
 			}
 		}
 	}
+
 	for name, p := range portalsMap {
 		if p.PortalTo == "" {
 			continue
@@ -295,6 +326,8 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 		Spikes:       spikes,
 		InvWalls:     invwalls,
 		NPCs:         npcs,
+		BossV1Pos:    bossV1.Origin,
+		BossV1:       bossV1,
 		fontsManager: fontsManager,
 		snapshotsDir: config.SnapshotsDir,
 		playerSpawn:  playerPos,
@@ -337,6 +370,12 @@ func (e *Engine) Reset() {
 	e.Player.MoveTo(e.playerSpawn)
 	e.Player.Health = player.DefaultHealth
 	e.activeNPC = nil
+	e.EnemyBullets = nil
+	if e.BossV1 != nil {
+		e.BossV1.MoveTo(e.BossV1Pos)
+		e.BossV1.Reset()
+	}
+	e.EnteredBossV1 = false
 	e.Tick = 0
 }
 
@@ -427,9 +466,17 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 		base := geometry.Origin.Add(visible)
 		op := &ebiten.DrawImageOptions{}
 
-		if c.Type() == object.PlayerType && e.Player.LooksRight {
-			op.GeoM.Scale(-1, 1)
-			op.GeoM.Translate(e.Player.Width, 0)
+		switch c.Type() {
+		case object.PlayerType:
+			if e.Player.LooksRight {
+				op.GeoM.Scale(-1, 1)
+				op.GeoM.Translate(e.Player.Width, 0)
+			}
+		case object.BossV1:
+			b := c.(*boss.V1)
+			op.GeoM.Translate(-boss.BossV1Width/2, -boss.BossV1Height/2)
+			op.GeoM.Rotate(b.RotateAngle())
+			op.GeoM.Translate(boss.BossV1Width/2, boss.BossV1Height/2)
 		}
 
 		op.GeoM.Translate(
@@ -458,6 +505,14 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 		case object.NPC:
 			n := c.(*npc.NPC)
 			screen.DrawImage(n.Image, op)
+		case object.BossV1:
+			b := c.(*boss.V1)
+			screen.DrawImage(b.Image, op)
+		case object.EnemyBullet:
+			b := c.(*damage.Bullet)
+			if !b.Triggered {
+				screen.DrawImage(b.Image, op)
+			}
 		default:
 			// not an item.
 		}
@@ -526,6 +581,8 @@ func (e *Engine) Update(inp *input.Input) error {
 	e.AlignPlayerY()
 	e.CheckPortals()
 	e.CheckSpikes()
+	e.CheckEnemyBullets()
+	e.CheckBossV1()
 	if err := e.CollectItems(); err != nil {
 		return fmt.Errorf("collecting items: %w", err)
 	}
@@ -658,6 +715,10 @@ func (e *Engine) CheckPortals() {
 		if p.TeleportTo == nil {
 			continue
 		}
+
+		if p.Boss == "v1" {
+			e.EnteredBossV1 = true
+		}
 		e.Player.MoveTo(p.TeleportTo)
 	}
 }
@@ -670,6 +731,41 @@ func (e *Engine) CheckSpikes() {
 
 		s := c.(*damage.Spike)
 		e.Player.Health -= s.Damage
+	}
+}
+
+func (e *Engine) CheckEnemyBullets() {
+	var bullets []*damage.Bullet
+
+	for _, b := range e.EnemyBullets {
+		b.Move(b.Direction)
+		ok := true
+		for _, c := range e.Collisions(b.Rectangle()) {
+			if c.Type() == object.StaticTileType {
+				ok = false
+				break
+			}
+		}
+		if ok {
+			bullets = append(bullets, b)
+		}
+	}
+
+	e.EnemyBullets = bullets
+
+	for _, c := range e.Collisions(e.Player.Rectangle()) {
+		if c.Type() != object.EnemyBullet {
+			continue
+		}
+
+		b := c.(*damage.Bullet)
+
+		if b.Triggered {
+			continue
+		}
+
+		e.Player.Health -= b.Damage
+		b.Triggered = true
 	}
 }
 
@@ -710,4 +806,18 @@ func (e *Engine) ValidateChecksum(checksum string) error {
 	}
 
 	return nil
+}
+
+func (e *Engine) CheckBossV1() {
+	if e.BossV1 == nil {
+		return
+	}
+
+	if !e.EnteredBossV1 {
+		return
+	}
+
+	e.BossV1.Move(e.BossV1.GetNextMove())
+
+	e.EnemyBullets = append(e.EnemyBullets, e.BossV1.CreateBullets()...)
 }
