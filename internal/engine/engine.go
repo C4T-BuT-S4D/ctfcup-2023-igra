@@ -2,6 +2,7 @@ package engine
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -62,11 +63,11 @@ type Engine struct {
 	Spikes       []*damage.Spike     `json:"-" msgpack:"spikes"`
 	InvWalls     []*wall.InvWall     `json:"-" msgpack:"invWalls"`
 	NPCs         []*npc.NPC          `json:"-" msgpack:"npcs"`
-	BossV1       *boss.V1            `json:"-" msgpack:"-"`
-	EnemyBullets []*damage.Bullet    `json:"-" msgpack:"-"`
+	BossV1       *boss.V1            `json:"-" msgpack:"bossV1"`
+	EnemyBullets []*damage.Bullet    `json:"-" msgpack:"enemyBullets"`
 
-	BossV1Pos     *geometry.Point `json:"-" msgpack:"-"`
-	EnteredBossV1 bool            `json:"-" msgpack:"-"`
+	BossV1Pos     *geometry.Point `json:"-" msgpack:"bossV1Pos"`
+	EnteredBossV1 bool            `json:"-" msgpack:"enteredBossV1"`
 
 	StartSnapshot *Snapshot `json:"-" msgpack:"-"`
 
@@ -475,8 +476,10 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 		case object.BossV1:
 			b := c.(*boss.V1)
 			op.GeoM.Translate(-boss.BossV1Width/2, -boss.BossV1Height/2)
-			op.GeoM.Rotate(b.RotateAngle())
+			op.GeoM.Rotate(b.RotateAngle)
 			op.GeoM.Translate(boss.BossV1Width/2, boss.BossV1Height/2)
+		default:
+			// not a player or boss.
 		}
 
 		op.GeoM.Translate(
@@ -787,12 +790,15 @@ func (e *Engine) Checksum() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("marshalling engine: %w", err)
 	}
+	if os.Getenv("DEBUG") == "1" {
+		fmt.Println("==CHECKSUM==")
+		fmt.Println(base64.StdEncoding.EncodeToString(b))
+	}
 
 	hash := sha256.New()
 	if _, err := hash.Write(b); err != nil {
 		return "", fmt.Errorf("hashing snapshot: %w", err)
 	}
-
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
@@ -816,6 +822,8 @@ func (e *Engine) CheckBossV1() {
 	if !e.EnteredBossV1 {
 		return
 	}
+
+	e.BossV1.Rotate()
 
 	e.BossV1.Move(e.BossV1.GetNextMove())
 

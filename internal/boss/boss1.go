@@ -17,14 +17,14 @@ const (
 
 type V1 struct {
 	*object.Object
-	startPos    *geometry.Point
-	moveVector  *geometry.Vector
-	Image       *ebiten.Image
+	StartPos    *geometry.Point
+	MoveVector  *geometry.Vector
+	Image       *ebiten.Image `msgpack:"-"`
 	bulletImage *ebiten.Image
-	rotateAngle float64
-	speed       float64
-	length      float64
-	ticks       int
+	RotateAngle float64
+	Speed       float64
+	Length      float64
+	Ticks       int
 }
 
 func (v *V1) Type() object.Type {
@@ -38,39 +38,37 @@ func NewV1(origin *geometry.Point, img *ebiten.Image, bulletImage *ebiten.Image,
 			Width:  BossV1Width,
 			Height: BossV1Height,
 		},
-		startPos:    origin,
-		moveVector:  &geometry.Vector{X: -speed},
+		StartPos:    origin,
+		MoveVector:  &geometry.Vector{X: -speed},
 		bulletImage: bulletImage,
-		speed:       speed,
-		length:      length,
+		Speed:       speed,
+		Length:      length,
 		Image:       img,
 	}
 }
 
 func (v *V1) Reset() {
-	v.rotateAngle = 0
-	v.moveVector = &geometry.Vector{X: -v.speed}
-	v.ticks = 0
+	v.RotateAngle = 0
+	v.MoveVector = &geometry.Vector{X: -v.Speed}
+	v.Ticks = 0
 }
 
-func (v *V1) RotateAngle() float64 {
-	result := v.rotateAngle
-	v.rotateAngle += math.Pi / 60
-	return result
+func (v *V1) Rotate() {
+	v.RotateAngle += math.Pi / 60
 }
 
 func (v *V1) GetNextMove() *geometry.Vector {
-	if v.Origin.X < v.startPos.X-v.length {
-		v.moveVector = &geometry.Vector{X: v.speed}
-	} else if v.Origin.X > v.startPos.X {
-		v.moveVector = &geometry.Vector{X: -v.speed}
+	if v.Origin.X < v.StartPos.X-v.Length {
+		v.MoveVector = &geometry.Vector{X: v.Speed}
+	} else if v.Origin.X > v.StartPos.X {
+		v.MoveVector = &geometry.Vector{X: -v.Speed}
 	}
-	return v.moveVector
+	return v.MoveVector
 }
 
 func (v *V1) CreateBullets() []*damage.Bullet {
-	v.ticks = (v.ticks + 1) % 8
-	if v.ticks != 0 {
+	v.Ticks = (v.Ticks + 1) % 8
+	if v.Ticks != 0 {
 		return nil
 	}
 
@@ -79,8 +77,8 @@ func (v *V1) CreateBullets() []*damage.Bullet {
 	const bulletDamage = 5
 
 	vv := []*geometry.Vector{
-		{X: math.Cos(v.rotateAngle), Y: math.Sin(v.rotateAngle)},
-		{X: math.Sin(v.rotateAngle), Y: math.Cos(v.rotateAngle)},
+		{X: math.Cos(v.RotateAngle), Y: math.Sin(v.RotateAngle)},
+		{X: math.Sin(v.RotateAngle), Y: math.Cos(v.RotateAngle)},
 	}
 
 	for _, mult := range []float64{2, 4, 8} {
