@@ -48,7 +48,7 @@ func (e *Engine) Collisions(r *geometry.Rectangle) []object.GenericObject {
 		}
 	}
 
-	if e.BossV1.Rectangle().Intersects(r) {
+	if e.BossV1 != nil && e.BossV1.Rectangle().Intersects(r) {
 		result = append(result, e.BossV1)
 	}
 

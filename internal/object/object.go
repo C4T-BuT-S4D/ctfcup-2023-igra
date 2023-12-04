@@ -39,6 +39,13 @@ type Object struct {
 	Height float64
 }
 
+func (o *Object) GetOrigin() *geometry.Point {
+	if o == nil {
+		return nil
+	}
+	return o.Origin
+}
+
 func (o *Object) Rectangle() *geometry.Rectangle {
 	return &geometry.Rectangle{
 		LeftX:   o.Origin.X,

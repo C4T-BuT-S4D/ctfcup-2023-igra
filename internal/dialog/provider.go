@@ -11,8 +11,10 @@ type StandardProvider struct {
 
 func (sp *StandardProvider) Get(id string) (Dialog, error) {
 	switch id {
-	case "slonser-web-task":
-		return NewDummy("Hello, I'm SLONIK! pröööh об этом", "wddsd"), nil
+	case "slonser-task":
+		return NewDummy("Hello, I'm SLONIK! pröööh об этом", "pröööh"), nil
+	case "wise-tree-task":
+		return NewDummy("I'm wise tree", "slavsarethebest"), nil
 	default:
 		return nil, fmt.Errorf("unknown dialog id: %s", id)
 	}

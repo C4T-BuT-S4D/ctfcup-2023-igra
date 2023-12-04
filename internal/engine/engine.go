@@ -342,7 +342,7 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 		Spikes:       spikes,
 		InvWalls:     invwalls,
 		NPCs:         npcs,
-		BossV1Pos:    bossV1.Origin,
+		BossV1Pos:    bossV1.GetOrigin(),
 		BossV1:       bossV1,
 		fontsManager: fontsManager,
 		snapshotsDir: config.SnapshotsDir,
@@ -570,11 +570,8 @@ func (e *Engine) Update(inp *input.Input) error {
 				// enter
 				e.activeNPC.Dialog.Feed(strings.Join(e.dialogInputBuffer, ""))
 				e.dialogInputBuffer = e.dialogInputBuffer[:0]
-			case ebiten.KeySpace:
-				e.dialogInputBuffer = append(e.dialogInputBuffer, " ")
 			default:
-				// TODO(jnovikov): rework this.
-				e.dialogInputBuffer = append(e.dialogInputBuffer, c.String())
+				e.dialogInputBuffer = append(e.dialogInputBuffer, input.Key(c).String())
 			}
 		}
 

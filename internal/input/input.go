@@ -35,6 +35,8 @@ var interestingKeys = []ebiten.Key{
 	ebiten.KeyY,
 	ebiten.KeyZ,
 	ebiten.KeySpace,
+	ebiten.KeyComma,
+	ebiten.KeyPeriod,
 	ebiten.KeySlash,
 	ebiten.KeyEscape,
 	ebiten.KeyEnter,
