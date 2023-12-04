@@ -27,9 +27,20 @@ message EngineSnapshot {
   bytes data = 1;
 }
 
+message DialogState {
+  bool finished = 1;
+  bool gave_item = 2;
+  string text = 3;
+}
+
+message GameEvent {
+  DialogState state = 1;
+}
+
 message ServerEvent {
   oneof event {
     EngineSnapshot snapshot = 1;
+    GameEvent game_event = 2;
   }
 }
 

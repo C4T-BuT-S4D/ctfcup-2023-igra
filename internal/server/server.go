@@ -80,6 +80,19 @@ func (g *GameServer) ProcessEvent(stream gameserverpb.GameServerService_ProcessE
 		if err := eng.ValidateChecksum(req.Checksum); err != nil {
 			return status.Errorf(codes.InvalidArgument, "invalid checksum: %v", err)
 		}
+
+		if npc := eng.ActiveNPC(); npc != nil {
+			event := &gameserverpb.ServerEvent{Event: &gameserverpb.ServerEvent_GameEvent{
+				GameEvent: &gameserverpb.GameEvent{
+					State: npc.Dialog.State().ToProto(),
+				},
+			}}
+			logrus.Debugf("sending event: %v", req)
+			if err := stream.Send(event); err != nil {
+				return status.Errorf(codes.Internal, "failed to send game event: %v", err)
+			}
+		}
+
 		if err := g.game.processEvent(req.Event); err != nil {
 			return status.Errorf(codes.Internal, "processing event: %v", err)
 		}
