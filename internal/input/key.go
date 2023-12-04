@@ -13,7 +13,10 @@ func (k Key) String() string {
 	case ebiten.KeyComma:
 		return ","
 	default:
-		A := 'A'
-		return string(A + rune(ebiten.Key(k)-ebiten.KeyA))
+		ebase, base, ek := ebiten.KeyA, 'A', ebiten.Key(k)
+		if ek >= ebiten.KeyDigit0 && ek <= ebiten.KeyDigit9 {
+			ebase, base = ebiten.KeyDigit0, '0'
+		}
+		return string(base + rune(ek-ebase))
 	}
 }
