@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/camera"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/dialog"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/engine"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/fonts"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/input"
@@ -31,7 +32,7 @@ func NewGame(ctx context.Context, client gameserverpb.GameServerServiceClient, l
 		inp: input.New(),
 
 		recvErrChan:     make(chan error, 1),
-		serverEventChan: make(chan *gameserverpb.ServerEvent),
+		serverEventChan: make(chan *gameserverpb.ServerEvent, 1),
 	}
 
 	engineConfig := engine.Config{
@@ -53,14 +54,16 @@ func NewGame(ctx context.Context, client gameserverpb.GameServerServiceClient, l
 			return nil, fmt.Errorf("reading start snapshot event: %w", err)
 		}
 
+		dialogProvider := &dialog.ClientProvider{}
+
 		if snapshotProto := startSnapshotEvent.GetSnapshot(); snapshotProto.Data == nil {
-			e, err := engine.New(engineConfig, smng, fntmng)
+			e, err := engine.New(engineConfig, smng, fntmng, dialogProvider)
 			if err != nil {
 				return nil, fmt.Errorf("creating engine without snapshot: %w", err)
 			}
 			g.Engine = e
 		} else {
-			e, err := engine.NewFromSnapshot(engineConfig, engine.NewSnapshotFromProto(snapshotProto), smng, fntmng)
+			e, err := engine.NewFromSnapshot(engineConfig, engine.NewSnapshotFromProto(snapshotProto), smng, fntmng, dialogProvider)
 			if err != nil {
 				return nil, fmt.Errorf("creating engine from snapshot: %w", err)
 			}
@@ -69,15 +72,17 @@ func NewGame(ctx context.Context, client gameserverpb.GameServerServiceClient, l
 		}
 
 		go func() {
-			serverEvent, err := eventStream.Recv()
-			if err != nil {
-				g.recvErrChan <- err
-				return
+			for {
+				serverEvent, err := eventStream.Recv()
+				if err != nil {
+					g.recvErrChan <- err
+					return
+				}
+				g.serverEventChan <- serverEvent
 			}
-			g.serverEventChan <- serverEvent
 		}()
 	} else {
-		e, err := engine.New(engineConfig, smng, fntmng)
+		e, err := engine.New(engineConfig, smng, fntmng, &dialog.StandardProvider{})
 		if err != nil {
 			return nil, fmt.Errorf("initializing engine: %w", err)
 		}
@@ -122,6 +127,20 @@ func (g *Game) Update() error {
 			Event:    &gameserverpb.ClientEvent{KeysPressed: g.inp.ToProto()},
 		}); err != nil {
 			return fmt.Errorf("failed to send event to the server: %w", err)
+		}
+
+		if g.Engine.ActiveNPC() != nil {
+			// Expect dialog state from the server.
+			select {
+			case serverEvent := <-g.serverEventChan:
+				if gs := serverEvent.GetGameEvent().GetState(); gs != nil {
+					g.Engine.ActiveNPC().Dialog.SetState(dialog.StateFromProto(gs))
+				}
+			case err := <-g.recvErrChan:
+				return fmt.Errorf("server returned error: %w", err)
+			case <-g.ctx.Done():
+				return g.ctx.Err()
+			}
 		}
 	}
 

@@ -1,14 +1,18 @@
 package dialog
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
-func NewDummy(s string) Dialog {
-	return &dummyDialog{greet: s}
+func NewDummy(s string, answer string) Dialog {
+	return &dummyDialog{greet: s, answer: answer}
 }
 
 type dummyDialog struct {
-	s     State
-	greet string
+	s      State
+	greet  string
+	answer string
 }
 
 func (d *dummyDialog) Greeting() {
@@ -16,9 +20,18 @@ func (d *dummyDialog) Greeting() {
 }
 
 func (d *dummyDialog) Feed(text string) {
-	d.s.Text += fmt.Sprintf("\nYou said: %s", text)
+	if strings.EqualFold(text, d.answer) {
+		d.s.Text += fmt.Sprintf("\n Answer '%s' is correct!", text)
+		d.s.GaveItem = true
+	} else {
+		d.s.Text += fmt.Sprintf("\n Answer '%s' is incorrect!", text)
+	}
 }
 
-func (d *dummyDialog) State() State {
-	return d.s
+func (d *dummyDialog) State() *State {
+	return &d.s
+}
+
+func (d *dummyDialog) SetState(s *State) {
+	d.s = *s
 }

@@ -116,7 +116,7 @@ func getTileImgByID(tileID tmx.ID, tileSet *ebitmx.EbitenTileset, img *ebiten.Im
 	return img.SubImage(image.Rect(x0, y0, x1, y1)).(*ebiten.Image)
 }
 
-func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Manager) (*Engine, error) {
+func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Manager, dialogProvider dialog.Provider) (*Engine, error) {
 	var resultImage *ebiten.Image
 	imgFile, err := resources.EmbeddedFS.Open("tiles/result.png")
 	if err != nil {
@@ -250,6 +250,10 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 				if err != nil {
 					return nil, fmt.Errorf("getting slon dialog sprite: %w", err)
 				}
+				slond, err := dialogProvider.Get(o.Name)
+				if err != nil {
+					return nil, fmt.Errorf("getting slon dialog: %w", err)
+				}
 				npcs = append(npcs, npc.New(
 					&geometry.Point{
 						X: o.X,
@@ -259,7 +263,8 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 					dimg,
 					o.Width,
 					o.Height,
-					dialog.NewDummy("Hello, I'm SLONIK! pröööh об этом"),
+					slond,
+					props["item"],
 				))
 			case "boss-v1":
 				img, err := spriteManager.GetSprite(sprites.BossV1)
@@ -284,6 +289,16 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 				}, img, bulletImg, speed, length)
 			}
 		}
+	}
+
+	for _, n := range npcs {
+		_, i, ok := lo.FindIndexOf(items, func(i *item.Item) bool {
+			return i.Name == n.ReturnsItem
+		})
+		if !ok {
+			return nil, fmt.Errorf("item %s not found for npc", n.ReturnsItem)
+		}
+		n.LinkedItem = items[i]
 	}
 
 	for name, p := range portalsMap {
@@ -327,7 +342,7 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 		Spikes:       spikes,
 		InvWalls:     invwalls,
 		NPCs:         npcs,
-		BossV1Pos:    bossV1.Origin,
+		BossV1Pos:    bossV1.GetOrigin(),
 		BossV1:       bossV1,
 		fontsManager: fontsManager,
 		snapshotsDir: config.SnapshotsDir,
@@ -335,8 +350,8 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 	}, nil
 }
 
-func NewFromSnapshot(config Config, snapshot *Snapshot, spritesManager *sprites.Manager, fontsManager *fonts.Manager) (*Engine, error) {
-	e, err := New(config, spritesManager, fontsManager)
+func NewFromSnapshot(config Config, snapshot *Snapshot, spritesManager *sprites.Manager, fontsManager *fonts.Manager, dialogProvider dialog.Provider) (*Engine, error) {
+	e, err := New(config, spritesManager, fontsManager, dialogProvider)
 	if err != nil {
 		return nil, fmt.Errorf("creating engine: %w", err)
 	}
@@ -529,6 +544,40 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 func (e *Engine) Update(inp *input.Input) error {
 	e.Tick++
 
+	if e.activeNPC != nil {
+		if inp.IsKeyNewlyPressed(ebiten.KeyEscape) {
+			e.activeNPC = nil
+			e.dialogInputBuffer = e.dialogInputBuffer[:0]
+			return nil
+		}
+		if e.activeNPC.Dialog.State().GaveItem {
+			e.activeNPC.LinkedItem.MoveTo(e.activeNPC.Origin.Add(&geometry.Vector{
+				X: +64,
+				Y: +32,
+			}))
+		}
+
+		pk := inp.JustPressedKeys()
+		if len(pk) > 0 {
+			c := pk[0]
+			switch c {
+			case ebiten.KeyBackspace:
+				// backspace
+				if len(e.dialogInputBuffer) > 0 {
+					e.dialogInputBuffer = e.dialogInputBuffer[:len(e.dialogInputBuffer)-1]
+				}
+			case ebiten.KeyEnter:
+				// enter
+				e.activeNPC.Dialog.Feed(strings.Join(e.dialogInputBuffer, ""))
+				e.dialogInputBuffer = e.dialogInputBuffer[:0]
+			default:
+				e.dialogInputBuffer = append(e.dialogInputBuffer, input.Key(c).String())
+			}
+		}
+
+		return nil
+	}
+
 	if e.Paused {
 		if inp.IsKeyNewlyPressed(ebiten.KeyP) {
 			e.Paused = false
@@ -546,34 +595,6 @@ func (e *Engine) Update(inp *input.Input) error {
 	}
 
 	if e.Player.IsDead() {
-		return nil
-	}
-
-	if e.activeNPC != nil {
-		if inp.IsKeyNewlyPressed(ebiten.KeyEscape) {
-			e.activeNPC = nil
-			e.dialogInputBuffer = e.dialogInputBuffer[:0]
-			return nil
-		}
-		pk := inp.JustPressedKeys()
-		if len(pk) > 0 {
-			c := pk[0]
-			switch c {
-			case ebiten.KeyBackspace:
-				// backspace
-				if len(e.dialogInputBuffer) > 0 {
-					e.dialogInputBuffer = e.dialogInputBuffer[:len(e.dialogInputBuffer)-1]
-				}
-			case ebiten.KeyEnter:
-				// enter
-				e.activeNPC.Dialog.Feed(strings.Join(e.dialogInputBuffer, ""))
-				e.dialogInputBuffer = e.dialogInputBuffer[:0]
-			default:
-				// TODO(jnovikov): rework this.
-				e.dialogInputBuffer = append(e.dialogInputBuffer, c.String())
-			}
-		}
-
 		return nil
 	}
 
@@ -828,4 +849,8 @@ func (e *Engine) CheckBossV1() {
 	e.BossV1.Move(e.BossV1.GetNextMove())
 
 	e.EnemyBullets = append(e.EnemyBullets, e.BossV1.CreateBullets()...)
+}
+
+func (e *Engine) ActiveNPC() *npc.NPC {
+	return e.activeNPC
 }

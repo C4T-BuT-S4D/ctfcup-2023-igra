@@ -31,6 +31,13 @@ func (v *V1) Type() object.Type {
 	return object.BossV1
 }
 
+func (v *V1) GetOrigin() *geometry.Point {
+	if v == nil {
+		return nil
+	}
+	return v.Object.GetOrigin()
+}
+
 func NewV1(origin *geometry.Point, img *ebiten.Image, bulletImage *ebiten.Image, speed float64, length float64) *V1 {
 	return &V1{
 		Object: &object.Object{
