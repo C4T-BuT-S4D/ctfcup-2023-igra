@@ -508,6 +508,8 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 			op.GeoM.Translate(-boss.BossV1Width/2, -boss.BossV1Height/2)
 			op.GeoM.Rotate(b.RotateAngle)
 			op.GeoM.Translate(boss.BossV1Width/2, boss.BossV1Height/2)
+		case object.EnemyBullet:
+			op.GeoM.Scale(4, 4)
 		default:
 			// not a player or boss.
 		}
@@ -573,7 +575,7 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 
 		for i, it := range e.Player.Inventory.Items {
 			op := &ebiten.DrawImageOptions{}
-			op.GeoM.Translate(float64(e.Camera.Width)-float64(i+1)*72, e.Camera.Height-72)
+			op.GeoM.Translate(e.Camera.Width-float64(i+1)*72, e.Camera.Height-72)
 			screen.DrawImage(it.Image, op)
 		}
 	}

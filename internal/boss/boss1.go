@@ -88,7 +88,7 @@ func (v *V1) GetNextMove() *geometry.Vector {
 
 func (v *V1) Tick() {
 	v.Ticks = (v.Ticks + 1) % 8
-	v.Health -= 1
+	v.Health--
 	if v.Health == 0 {
 		v.Dead = true
 		return
