@@ -510,6 +510,7 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 			op.GeoM.Translate(boss.BossV1Width/2, boss.BossV1Height/2)
 		case object.EnemyBullet:
 			op.GeoM.Scale(4, 4)
+			op.GeoM.Translate(-2, 0)
 		default:
 			// not a player or boss.
 		}
