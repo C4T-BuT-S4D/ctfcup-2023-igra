@@ -437,7 +437,6 @@ func (e *Engine) SaveSnapshot(snapshot *Snapshot) error {
 }
 
 func (e *Engine) drawDiedScreen(screen *ebiten.Image) {
-	// Draw "YOU DIED" text over all screen using red color.
 	face := e.fontsManager.Get(fonts.DSouls)
 	redColor := color.RGBA{R: 255, G: 0, B: 0, A: 255}
 
@@ -562,6 +561,15 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 
 		bossHpImage := e.spriteManager.GetSprite(sprites.HP)
 		screen.DrawImage(bossHpImage, op)
+	}
+
+	if !e.Player.IsDead() {
+		face := e.fontsManager.Get(fonts.Dialog)
+		redColor := color.RGBA{R: 0, G: 255, B: 0, A: 255}
+
+		txt := fmt.Sprintf("HP: %d", e.Player.Health)
+
+		text.Draw(screen, txt, face, 72, camera.HEIGHT-72, redColor)
 	}
 
 	if e.activeNPC != nil {
