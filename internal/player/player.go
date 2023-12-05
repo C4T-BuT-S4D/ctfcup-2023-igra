@@ -46,10 +46,7 @@ func New(origin *geometry.Point, spriteManager *sprites.Manager) (*Player, error
 		FallingAnimation:  1,
 	} {
 		for i := 0; i < numAnims; i++ {
-			img, err := spriteManager.GetAnimationSprite(sprites.Player, fmt.Sprintf("%s_%d", anim, i))
-			if err != nil {
-				return nil, fmt.Errorf("getting sprite: %w", err)
-			}
+			img := spriteManager.GetAnimationSprite(sprites.Player, fmt.Sprintf("%s_%d", anim, i))
 			animations[anim] = append(animations[anim], img)
 		}
 	}

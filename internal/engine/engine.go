@@ -72,6 +72,7 @@ type Engine struct {
 	StartSnapshot *Snapshot `json:"-" msgpack:"-"`
 
 	fontsManager      *fonts.Manager
+	spriteManager     *sprites.Manager
 	snapshotsDir      string
 	playerSpawn       *geometry.Point
 	activeNPC         *npc.NPC
@@ -205,10 +206,7 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 					props["important"] == "true",
 				))
 			case "portal":
-				img, err := spriteManager.GetSprite(sprites.Portal)
-				if err != nil {
-					return nil, fmt.Errorf("getting portal sprite: %w", err)
-				}
+				img := spriteManager.GetSprite(sprites.Portal)
 				portalsMap[o.Name] = portal.New(
 					&geometry.Point{
 						X: o.X,
@@ -221,10 +219,7 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 					nil,
 					props["boss"])
 			case "spike":
-				img, err := spriteManager.GetSprite(sprites.Spike)
-				if err != nil {
-					return nil, fmt.Errorf("getting spike sprite: %w", err)
-				}
+				img := spriteManager.GetSprite(sprites.Spike)
 
 				spikes = append(spikes, damage.NewSpike(
 					&geometry.Point{
@@ -243,14 +238,8 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 					o.Width,
 					o.Height))
 			case "npc":
-				img, err := spriteManager.GetSprite(sprites.Type(props["sprite"]))
-				if err != nil {
-					return nil, fmt.Errorf("getting slon sprite: %w", err)
-				}
-				dimg, err := spriteManager.GetSprite(sprites.Type(props["dialog-sprite"]))
-				if err != nil {
-					return nil, fmt.Errorf("getting slon dialog sprite: %w", err)
-				}
+				img := spriteManager.GetSprite(sprites.Type(props["sprite"]))
+				dimg := spriteManager.GetSprite(sprites.Type(props["dialog-sprite"]))
 				slond, err := dialogProvider.Get(o.Name)
 				if err != nil {
 					return nil, fmt.Errorf("getting slon dialog: %w", err)
@@ -268,14 +257,8 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 					props["item"],
 				))
 			case "boss-v1":
-				img, err := spriteManager.GetSprite(sprites.BossV1)
-				if err != nil {
-					return nil, fmt.Errorf("getting boss v1 sprite: %w", err)
-				}
-				bulletImg, err := spriteManager.GetSprite(sprites.Bullet)
-				if err != nil {
-					return nil, fmt.Errorf("getting bullet sprite: %w", err)
-				}
+				img := spriteManager.GetSprite(sprites.BossV1)
+				bulletImg := spriteManager.GetSprite(sprites.Bullet)
 				speed, err := strconv.ParseFloat(props["speed"], 64)
 				if err != nil {
 					return nil, fmt.Errorf("getting boss speed: %w", err)
@@ -366,19 +349,20 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 	}
 
 	return &Engine{
-		Tiles:        mapTiles,
-		Camera:       cam,
-		Player:       p,
-		Items:        items,
-		Portals:      portals,
-		Spikes:       spikes,
-		InvWalls:     invwalls,
-		NPCs:         npcs,
-		BossV1Pos:    bossV1.GetOrigin(),
-		BossV1:       bossV1,
-		fontsManager: fontsManager,
-		snapshotsDir: config.SnapshotsDir,
-		playerSpawn:  playerPos,
+		Tiles:         mapTiles,
+		Camera:        cam,
+		Player:        p,
+		Items:         items,
+		Portals:       portals,
+		Spikes:        spikes,
+		InvWalls:      invwalls,
+		NPCs:          npcs,
+		BossV1Pos:     bossV1.GetOrigin(),
+		BossV1:        bossV1,
+		spriteManager: spriteManager,
+		fontsManager:  fontsManager,
+		snapshotsDir:  config.SnapshotsDir,
+		playerSpawn:   playerPos,
 	}, nil
 }
 
@@ -568,6 +552,16 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 		default:
 			// not an item.
 		}
+	}
+
+	if e.EnteredBossV1 && !e.BossV1.Dead {
+		op := &ebiten.DrawImageOptions{}
+		width := float64(camera.WIDTH) * float64(e.BossV1.Health) / float64(e.BossV1.StartHealth)
+		op.GeoM.Scale(width, 32)
+		op.GeoM.Translate((float64(camera.WIDTH)-width)/2, 0)
+
+		bossHpImage := e.spriteManager.GetSprite(sprites.HP)
+		screen.DrawImage(bossHpImage, op)
 	}
 
 	if e.activeNPC != nil {

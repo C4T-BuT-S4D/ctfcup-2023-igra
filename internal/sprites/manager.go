@@ -18,28 +18,28 @@ type Manager struct {
 	m     sync.Mutex
 }
 
-func (m *Manager) getSprite(path string) (*ebiten.Image, error) {
+func (m *Manager) getSprite(path string) *ebiten.Image {
 	m.m.Lock()
 	defer m.m.Unlock()
 
 	if sprite, ok := m.cache[path]; ok {
-		return sprite, nil
+		return sprite
 	}
 
 	eimg, _, err := ebitenutil.NewImageFromFileSystem(resources.EmbeddedFS, path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open sprite ('%v'): %w", path, err)
+		panic(fmt.Sprintf("failed to open sprite ('%v'): %v", path, err))
 	}
 
 	m.cache[path] = eimg
-	return eimg, nil
+	return eimg
 }
 
-func (m *Manager) GetSprite(spriteType Type) (*ebiten.Image, error) {
+func (m *Manager) GetSprite(spriteType Type) *ebiten.Image {
 	return m.getSprite(fmt.Sprintf("sprites/%s.png", spriteType))
 }
 
-func (m *Manager) GetAnimationSprite(spriteType Type, animation string) (*ebiten.Image, error) {
+func (m *Manager) GetAnimationSprite(spriteType Type, animation string) *ebiten.Image {
 	return m.getSprite(fmt.Sprintf("sprites/%s_%s.png", spriteType, animation))
 }
 
