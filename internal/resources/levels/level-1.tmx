@@ -409,7 +409,7 @@
   <object id="95" type="spike" x="3456" y="2240" width="32" height="32"/>
   <object id="96" type="spike" x="3392" y="2176" width="32" height="32"/>
   <object id="97" type="invwall" x="2623" y="1854" width="32" height="32"/>
-  <object id="99" name="renbou hat" type="item" x="904" y="4200" width="16" height="16">
+  <object id="99" name="renbou hat" type="item" x="896" y="4192" width="32" height="32">
    <properties>
     <property name="important" type="bool" value="true"/>
    </properties>

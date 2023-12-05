@@ -570,6 +570,12 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 		txt := fmt.Sprintf("HP: %d", e.Player.Health)
 
 		text.Draw(screen, txt, face, 72, camera.HEIGHT-72, redColor)
+
+		for i, it := range e.Player.Inventory.Items {
+			op := &ebiten.DrawImageOptions{}
+			op.GeoM.Translate(float64(e.Camera.Width)-float64(i+1)*72, e.Camera.Height-72)
+			screen.DrawImage(it.Image, op)
+		}
 	}
 
 	if e.activeNPC != nil {
