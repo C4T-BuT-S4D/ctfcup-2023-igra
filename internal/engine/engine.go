@@ -63,7 +63,7 @@ type Engine struct {
 	Spikes       []*damage.Spike     `json:"-" msgpack:"spikes"`
 	InvWalls     []*wall.InvWall     `json:"-" msgpack:"invWalls"`
 	NPCs         []*npc.NPC          `json:"-" msgpack:"npcs"`
-	BossV1       *boss.V1            `json:"-" msgpack:"bossV1"`
+	BossV1       *boss.V1            `json:"bossV1" msgpack:"bossV1"`
 	EnemyBullets []*damage.Bullet    `json:"-" msgpack:"enemyBullets"`
 
 	BossV1Pos     *geometry.Point `json:"-" msgpack:"bossV1Pos"`
@@ -77,8 +77,8 @@ type Engine struct {
 	activeNPC         *npc.NPC
 	dialogInputBuffer []string
 
-	Paused bool `msgpack:"paused"`
-	Tick   int  `msgpack:"tick"`
+	Paused bool `json:"-" msgpack:"paused"`
+	Tick   int  `json:"-" msgpack:"tick"`
 }
 
 func getProperties(o *tmx.Object) map[string]string {
@@ -186,6 +186,7 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 	var invwalls []*wall.InvWall
 	var npcs []*npc.NPC
 	var bossV1 *boss.V1
+	winPoints := make(map[string]*geometry.Point)
 	portalsMap := make(map[string]*portal.Portal)
 
 	for _, og := range testMap.ObjectGroups {
@@ -283,12 +284,43 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 				if err != nil {
 					return nil, fmt.Errorf("getting boss length: %w", err)
 				}
-				bossV1 = boss.NewV1(&geometry.Point{
+				health, err := strconv.ParseInt(props["health"], 10, 64)
+				if err != nil {
+					return nil, fmt.Errorf("getting boss length: %w", err)
+				}
+				bossV1 = boss.NewV1(o.Name, &geometry.Point{
 					X: o.X,
 					Y: o.Y,
-				}, img, bulletImg, speed, length)
+				}, img, bulletImg, speed, length, health, props["portal"], props["item"])
+			case "boss-win":
+				winPoints[o.Name] = &geometry.Point{X: o.X, Y: o.Y}
 			}
 		}
+	}
+
+	if bossV1 != nil {
+		winPoint, ok := winPoints[bossV1.Name]
+		if !ok {
+			return nil, fmt.Errorf("win point %s not found for boss v1", bossV1.Name)
+		}
+
+		bossV1.WinPoint = winPoint
+
+		p, ok := portalsMap[bossV1.PortalName]
+		if !ok {
+			return nil, fmt.Errorf("win portal %s not found for boss v1", bossV1.PortalName)
+		}
+
+		bossV1.Portal = p
+
+		_, i, ok := lo.FindIndexOf(items, func(i *item.Item) bool {
+			return i.Name == bossV1.ItemName
+		})
+		if !ok {
+			return nil, fmt.Errorf("item %s not found for boss v1", bossV1.ItemName)
+		}
+
+		bossV1.Item = items[i]
 	}
 
 	for _, n := range npcs {
@@ -525,7 +557,9 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 			screen.DrawImage(n.Image, op)
 		case object.BossV1:
 			b := c.(*boss.V1)
-			screen.DrawImage(b.Image, op)
+			if !b.Dead {
+				screen.DrawImage(b.Image, op)
+			}
 		case object.EnemyBullet:
 			b := c.(*damage.Bullet)
 			if !b.Triggered {
@@ -844,7 +878,13 @@ func (e *Engine) CheckBossV1() {
 		return
 	}
 
-	e.BossV1.Rotate()
+	if e.BossV1.Dead {
+		e.BossV1.Portal.MoveTo(e.BossV1.WinPoint)
+		e.BossV1.Item.MoveTo(e.BossV1.WinPoint.Add(&geometry.Vector{X: -e.BossV1.Portal.Width}))
+		return
+	}
+
+	e.BossV1.Tick()
 
 	e.BossV1.Move(e.BossV1.GetNextMove())
 

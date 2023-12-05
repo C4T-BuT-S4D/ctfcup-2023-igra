@@ -7,7 +7,9 @@ import (
 
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/damage"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/geometry"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/item"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/object"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/portal"
 )
 
 const (
@@ -16,15 +18,24 @@ const (
 )
 
 type V1 struct {
-	*object.Object
-	StartPos    *geometry.Point
-	MoveVector  *geometry.Vector
-	Image       *ebiten.Image `msgpack:"-"`
-	bulletImage *ebiten.Image
-	RotateAngle float64
-	Speed       float64
-	Length      float64
-	Ticks       int
+	*object.Object `json:"-"`
+	Name           string           `json:"-"`
+	StartPos       *geometry.Point  `json:"-"`
+	MoveVector     *geometry.Vector `json:"-"`
+	Image          *ebiten.Image    `json:"-" msgpack:"-"`
+	bulletImage    *ebiten.Image    `json:"-"`
+	RotateAngle    float64          `json:"-"`
+	Speed          float64          `json:"-"`
+	Length         float64          `json:"-"`
+	Ticks          int              `json:"-"`
+	StartHealth    int64            `json:"-"`
+	Health         int64            `json:"-"`
+	Dead           bool             `json:"dead"`
+	WinPoint       *geometry.Point  `json:"-"`
+	PortalName     string           `json:"-"`
+	ItemName       string           `json:"-"`
+	Portal         *portal.Portal   `json:"-"`
+	Item           *item.Item       `json:"-"`
 }
 
 func (v *V1) Type() object.Type {
@@ -38,19 +49,24 @@ func (v *V1) GetOrigin() *geometry.Point {
 	return v.Object.GetOrigin()
 }
 
-func NewV1(origin *geometry.Point, img *ebiten.Image, bulletImage *ebiten.Image, speed float64, length float64) *V1 {
+func NewV1(name string, origin *geometry.Point, img *ebiten.Image, bulletImage *ebiten.Image, speed float64, length float64, health int64, portalName string, itemName string) *V1 {
 	return &V1{
 		Object: &object.Object{
 			Origin: origin,
 			Width:  BossV1Width,
 			Height: BossV1Height,
 		},
+		Name:        name,
 		StartPos:    origin,
 		MoveVector:  &geometry.Vector{X: -speed},
 		bulletImage: bulletImage,
 		Speed:       speed,
 		Length:      length,
 		Image:       img,
+		StartHealth: health,
+		Health:      health,
+		PortalName:  portalName,
+		ItemName:    itemName,
 	}
 }
 
@@ -58,10 +74,7 @@ func (v *V1) Reset() {
 	v.RotateAngle = 0
 	v.MoveVector = &geometry.Vector{X: -v.Speed}
 	v.Ticks = 0
-}
-
-func (v *V1) Rotate() {
-	v.RotateAngle += math.Pi / 60
+	v.Health = v.StartHealth
 }
 
 func (v *V1) GetNextMove() *geometry.Vector {
@@ -73,8 +86,17 @@ func (v *V1) GetNextMove() *geometry.Vector {
 	return v.MoveVector
 }
 
-func (v *V1) CreateBullets() []*damage.Bullet {
+func (v *V1) Tick() {
 	v.Ticks = (v.Ticks + 1) % 8
+	v.Health -= 1
+	if v.Health == 0 {
+		v.Dead = true
+		return
+	}
+	v.RotateAngle += math.Pi / 60
+}
+
+func (v *V1) CreateBullets() []*damage.Bullet {
 	if v.Ticks != 0 {
 		return nil
 	}

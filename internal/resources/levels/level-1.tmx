@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" width="400" height="300" tilewidth="32" tileheight="32" infinite="0" nextlayerid="7" nextobjectid="157">
+<map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" width="400" height="300" tilewidth="32" tileheight="32" infinite="0" nextlayerid="7" nextobjectid="160">
  <tileset firstgid="1" source="../tiles/ice.tsx"/>
  <layer id="1" name="tiles" width="400" height="300">
   <data encoding="csv">
@@ -409,7 +409,7 @@
   <object id="95" type="spike" x="3456" y="2240" width="32" height="32"/>
   <object id="96" type="spike" x="3392" y="2176" width="32" height="32"/>
   <object id="97" type="invwall" x="2623" y="1854" width="32" height="32"/>
-  <object id="99" name="renbou-hat" type="item" x="904" y="4200" width="16" height="16">
+  <object id="99" name="renbou hat" type="item" x="904" y="4200" width="16" height="16">
    <properties>
     <property name="important" type="bool" value="true"/>
    </properties>
@@ -474,12 +474,28 @@
   <object id="153" name="boss" type="portal" x="2912" y="5376" width="32" height="32"/>
   <object id="154" name="boss" type="boss-v1" x="3648" y="5024">
    <properties>
+    <property name="health" type="int" value="11100"/>
+    <property name="item" value="random_usern4me scarf"/>
     <property name="length" type="float" value="704"/>
+    <property name="portal" value="boss-win"/>
     <property name="speed" type="float" value="10"/>
    </properties>
    <point/>
   </object>
   <object id="155" name="iron branch" type="item" x="1184" y="1088" width="32" height="32">
+   <properties>
+    <property name="important" type="bool" value="true"/>
+   </properties>
+  </object>
+  <object id="157" name="boss" type="boss-win" x="3712" y="5376">
+   <point/>
+  </object>
+  <object id="158" name="boss-win" type="portal" x="9440" y="4544" width="32" height="32">
+   <properties>
+    <property name="portal-to" value="lobby-boss"/>
+   </properties>
+  </object>
+  <object id="159" name="random_usern4me scarf" type="item" x="9448" y="4648" width="32" height="32">
    <properties>
     <property name="important" type="bool" value="true"/>
    </properties>
