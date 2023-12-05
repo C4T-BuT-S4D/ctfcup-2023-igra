@@ -474,7 +474,7 @@
   <object id="153" name="boss" type="portal" x="2912" y="5376" width="32" height="32"/>
   <object id="154" name="boss" type="boss-v1" x="3648" y="5024">
    <properties>
-    <property name="health" type="int" value="1110"/>
+    <property name="health" type="int" value="11100"/>
     <property name="item" value="random_usern4me scarf"/>
     <property name="length" type="float" value="704"/>
     <property name="portal" value="boss-win"/>

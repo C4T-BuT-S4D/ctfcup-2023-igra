@@ -893,10 +893,9 @@ func (e *Engine) CheckBossV1() {
 	}
 
 	e.BossV1.Tick()
+	e.EnemyBullets = append(e.EnemyBullets, e.BossV1.CreateBullets()...)
 
 	e.BossV1.Move(e.BossV1.GetNextMove())
-
-	e.EnemyBullets = append(e.EnemyBullets, e.BossV1.CreateBullets()...)
 }
 
 func (e *Engine) ActiveNPC() *npc.NPC {
