@@ -19,6 +19,7 @@ import (
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/fonts"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/input"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/logging"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/music"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/sprites"
 	gameserverpb "github.com/c4t-but-s4d/ctfcup-2023-igra/proto/go/gameserver"
 )
@@ -41,6 +42,7 @@ func NewGame(ctx context.Context, client gameserverpb.GameServerServiceClient, l
 
 	smng := sprites.NewManager()
 	fntmng := fonts.NewManager()
+	mscmng := music.NewManager()
 
 	if client != nil {
 		eventStream, err := client.ProcessEvent(ctx)
@@ -57,13 +59,13 @@ func NewGame(ctx context.Context, client gameserverpb.GameServerServiceClient, l
 		dialogProvider := &dialog.ClientProvider{}
 
 		if snapshotProto := startSnapshotEvent.GetSnapshot(); snapshotProto.Data == nil {
-			e, err := engine.New(engineConfig, smng, fntmng, dialogProvider)
+			e, err := engine.New(engineConfig, smng, fntmng, mscmng, dialogProvider)
 			if err != nil {
 				return nil, fmt.Errorf("creating engine without snapshot: %w", err)
 			}
 			g.Engine = e
 		} else {
-			e, err := engine.NewFromSnapshot(engineConfig, engine.NewSnapshotFromProto(snapshotProto), smng, fntmng, dialogProvider)
+			e, err := engine.NewFromSnapshot(engineConfig, engine.NewSnapshotFromProto(snapshotProto), smng, fntmng, mscmng, dialogProvider)
 			if err != nil {
 				return nil, fmt.Errorf("creating engine from snapshot: %w", err)
 			}
@@ -82,7 +84,7 @@ func NewGame(ctx context.Context, client gameserverpb.GameServerServiceClient, l
 			}
 		}()
 	} else {
-		e, err := engine.New(engineConfig, smng, fntmng, &dialog.StandardProvider{})
+		e, err := engine.New(engineConfig, smng, fntmng, mscmng, &dialog.StandardProvider{})
 		if err != nil {
 			return nil, fmt.Errorf("initializing engine: %w", err)
 		}

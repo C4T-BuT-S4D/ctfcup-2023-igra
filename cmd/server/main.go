@@ -69,14 +69,14 @@ func main() {
 				return nil, fmt.Errorf("reading snapshot file: %w", err)
 			}
 
-			e, err := engine.NewFromSnapshot(engineConfig, &engine.Snapshot{Data: data}, smng, fntmng, dialogProvider)
+			e, err := engine.NewFromSnapshot(engineConfig, &engine.Snapshot{Data: data}, smng, fntmng, nil, dialogProvider)
 			if err != nil {
 				return nil, fmt.Errorf("creating engine from snapshot: %w", err)
 			}
 			return e, nil
 		}
 
-		e, err := engine.New(engineConfig, smng, fntmng, dialogProvider)
+		e, err := engine.New(engineConfig, smng, fntmng, nil, dialogProvider)
 		if err != nil {
 			return nil, fmt.Errorf("creating engine without snapshot: %w", err)
 		}

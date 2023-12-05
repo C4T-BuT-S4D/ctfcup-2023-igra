@@ -28,7 +28,7 @@ func (m *Manager) getSprite(path string) *ebiten.Image {
 
 	eimg, _, err := ebitenutil.NewImageFromFileSystem(resources.EmbeddedFS, path)
 	if err != nil {
-		panic(fmt.Sprintf("failed to open sprite ('%v'): %v", path, err))
+		panic(err)
 	}
 
 	m.cache[path] = eimg

@@ -32,6 +32,7 @@ import (
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/geometry"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/input"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/item"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/music"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/npc"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/object"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/physics"
@@ -73,6 +74,7 @@ type Engine struct {
 
 	fontsManager      *fonts.Manager
 	spriteManager     *sprites.Manager
+	musicManager      *music.Manager
 	snapshotsDir      string
 	playerSpawn       *geometry.Point
 	activeNPC         *npc.NPC
@@ -117,7 +119,7 @@ func getTileImgByID(tileID tmx.ID, tileSet *ebitmx.EbitenTileset, img *ebiten.Im
 	return img.SubImage(image.Rect(x0, y0, x1, y1)).(*ebiten.Image)
 }
 
-func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Manager, dialogProvider dialog.Provider) (*Engine, error) {
+func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Manager, musicManager *music.Manager, dialogProvider dialog.Provider) (*Engine, error) {
 	var resultImage *ebiten.Image
 	imgFile, err := resources.EmbeddedFS.Open("tiles/result.png")
 	if err != nil {
@@ -361,13 +363,14 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 		BossV1:        bossV1,
 		spriteManager: spriteManager,
 		fontsManager:  fontsManager,
+		musicManager:  musicManager,
 		snapshotsDir:  config.SnapshotsDir,
 		playerSpawn:   playerPos,
 	}, nil
 }
 
-func NewFromSnapshot(config Config, snapshot *Snapshot, spritesManager *sprites.Manager, fontsManager *fonts.Manager, dialogProvider dialog.Provider) (*Engine, error) {
-	e, err := New(config, spritesManager, fontsManager, dialogProvider)
+func NewFromSnapshot(config Config, snapshot *Snapshot, spritesManager *sprites.Manager, fontsManager *fonts.Manager, musicManager *music.Manager, dialogProvider dialog.Provider) (*Engine, error) {
+	e, err := New(config, spritesManager, fontsManager, musicManager, dialogProvider)
 	if err != nil {
 		return nil, fmt.Errorf("creating engine: %w", err)
 	}
@@ -409,6 +412,14 @@ func (e *Engine) Reset() {
 	}
 	e.EnteredBossV1 = false
 	e.Tick = 0
+	if e.musicManager != nil {
+		if err := e.musicManager.GetPlayer(music.Background).Rewind(); err != nil {
+			panic(err)
+		}
+		if err := e.musicManager.GetPlayer(music.BossV1).Rewind(); err != nil {
+			panic(err)
+		}
+	}
 }
 
 func (e *Engine) MakeSnapshot() (*Snapshot, error) {
@@ -588,6 +599,22 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 
 func (e *Engine) Update(inp *input.Input) error {
 	e.Tick++
+
+	if e.musicManager != nil {
+		if e.EnteredBossV1 && !e.BossV1.Dead {
+			e.musicManager.GetPlayer(music.Background).Pause()
+			e.musicManager.GetPlayer(music.BossV1).Play()
+		} else {
+			e.musicManager.GetPlayer(music.BossV1).Pause()
+			p := e.musicManager.GetPlayer(music.Background)
+			p.Play()
+			if !p.IsPlaying() {
+				if err := p.Rewind(); err != nil {
+					panic(err)
+				}
+			}
+		}
+	}
 
 	if e.activeNPC != nil {
 		if inp.IsKeyNewlyPressed(ebiten.KeyEscape) {
