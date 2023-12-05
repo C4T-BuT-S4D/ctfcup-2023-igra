@@ -103,7 +103,7 @@ func (v *V1) CreateBullets() []*damage.Bullet {
 
 	var bullets []*damage.Bullet
 
-	const bulletDamage = 10
+	const bulletDamage = 6
 
 	vv := []*geometry.Vector{
 		{X: math.Cos(v.RotateAngle), Y: math.Sin(v.RotateAngle)},
