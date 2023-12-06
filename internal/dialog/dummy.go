@@ -19,14 +19,13 @@ func (d *dummyDialog) Greeting() {
 	d.s.Text = d.greet
 }
 
-func (d *dummyDialog) Feed(text string) error {
+func (d *dummyDialog) Feed(text string) {
 	if strings.EqualFold(text, d.answer) {
 		d.s.Text += fmt.Sprintf("\n Answer '%s' is correct!", text)
 		d.s.GaveItem = true
 	} else {
 		d.s.Text += fmt.Sprintf("\n Answer '%s' is incorrect!", text)
 	}
-	return nil
 }
 
 func (d *dummyDialog) State() *State {

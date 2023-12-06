@@ -14,9 +14,9 @@ func (c *ClientDialog) Greeting() {
 	// No need to greet.
 }
 
-func (c *ClientDialog) Feed(_ string) error {
+func (c *ClientDialog) Feed(_ string) {
 	// No need to feed.
-	return nil
+	return
 }
 
 func (c *ClientDialog) State() *State {
