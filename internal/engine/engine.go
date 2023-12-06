@@ -464,11 +464,11 @@ func (e *Engine) drawDiedScreen(screen *ebiten.Image) {
 func (e *Engine) drawNPCDialog(screen *ebiten.Image) {
 	colorWhite := color.RGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}
 	// Draw dialog border (outer rectangle).
-	borderw, borderh := camera.WIDTH-camera.WIDTH/8, camera.HEIGHT/4
+	borderw, borderh := camera.WIDTH-camera.WIDTH/8, camera.HEIGHT/2
 	img := ebiten.NewImage(borderw, borderh)
 	img.Fill(colorWhite)
 	op := &ebiten.DrawImageOptions{}
-	bx, by := camera.WIDTH/16.0, camera.HEIGHT/4.0*3-camera.HEIGHT/16
+	bx, by := camera.WIDTH/16.0, camera.HEIGHT/2.0-camera.HEIGHT/16
 	op.GeoM.Translate(bx, by)
 	screen.DrawImage(img, op)
 
@@ -491,6 +491,8 @@ func (e *Engine) drawNPCDialog(screen *ebiten.Image) {
 	dtx, dty := ibx+camera.WIDTH/32, iby+camera.HEIGHT/32
 	face := e.fontsManager.Get(fonts.Dialog)
 	txt := e.activeNPC.Dialog.State().Text
+	txt = input.AutoWrap(txt, face, ibw-camera.WIDTH/32)
+
 	text.Draw(screen, txt, face, int(dtx), int(dty), colorWhite)
 
 	// Draw dialog input buffer.
@@ -498,7 +500,8 @@ func (e *Engine) drawNPCDialog(screen *ebiten.Image) {
 		nLines := strings.Count(txt, "\n")
 		dtbx, dtby := dtx, dty+float64(nLines*face.Metrics().Height.Floor())+1.0*float64(face.Metrics().Height.Floor())
 		c := color.RGBA{R: 0x00, G: 0xff, B: 0xff, A: 0xff}
-		text.Draw(screen, strings.Join(e.dialogInputBuffer, ""), face, int(dtbx), int(dtby), c)
+		x := input.AutoWrap(strings.Join(e.dialogInputBuffer, ""), face, ibw-camera.WIDTH/32)
+		text.Draw(screen, x, face, int(dtbx), int(dtby), c)
 	}
 }
 
@@ -612,7 +615,7 @@ func (e *Engine) Update(inp *input.Input) error {
 		} else {
 			e.musicManager.GetPlayer(music.BossV1).Pause()
 			p := e.musicManager.GetPlayer(music.Background)
-			//p.Play()
+			p.Play()
 			if !p.IsPlaying() {
 				if err := p.Rewind(); err != nil {
 					panic(err)

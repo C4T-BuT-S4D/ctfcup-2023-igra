@@ -63,7 +63,7 @@ func (L *LLM) Feed(text string) {
 		return
 	}
 
-	L.state.Text = respBody["response"]
+	L.state.Text = fmt.Sprintf("> %s\n%s", text, respBody["response"])
 	return
 }
 
