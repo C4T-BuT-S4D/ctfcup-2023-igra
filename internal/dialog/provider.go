@@ -15,7 +15,7 @@ type StandardProvider struct {
 func (sp *StandardProvider) Get(id string) (Dialog, error) {
 	switch id {
 	case "slonser-task":
-		return NewDummy("Hello, I'm SLONIK! pröööh об этом", "pröööh"), nil
+		return NewDummy("Hello, I'm SLONIK and I'm ______ об этом", "pröööh"), nil
 	case "wise-tree-task":
 		return NewWiseTree(), nil
 	case "llm-boss-1":
@@ -25,6 +25,8 @@ func (sp *StandardProvider) Get(id string) (Dialog, error) {
 			Intro:  "I'm the boss of Arbalest of Siberia. Don't try to defeat me!",
 			URL:    "http://localhost:8081",
 		}, nil
+	case "capytoshka":
+		return NewCapy(os.Getenv("CAPY_TOKEN")), nil
 	default:
 		return nil, fmt.Errorf("unknown dialog id: %s", id)
 	}

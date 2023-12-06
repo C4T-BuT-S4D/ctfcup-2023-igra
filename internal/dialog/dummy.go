@@ -23,6 +23,7 @@ func (d *dummyDialog) Feed(text string) {
 	if strings.EqualFold(text, d.answer) {
 		d.s.Text += fmt.Sprintf("\n Answer '%s' is correct!", text)
 		d.s.GaveItem = true
+		d.s.Finished = true
 	} else {
 		d.s.Text += fmt.Sprintf("\n Answer '%s' is incorrect!", text)
 	}
