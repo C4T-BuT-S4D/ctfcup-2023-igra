@@ -1,7 +1,6 @@
 package eth
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"math/big"
@@ -15,7 +14,7 @@ var (
 	ErrOwnerNotString  = errors.New("owner is not address")
 )
 
-func Check(ctx context.Context, contractAddr string, address string, tokenId int, token string) (bool, error) {
+func Check(contractAddr string, address string, tokenId int, token string) (bool, error) {
 	w3, err := web3.NewWeb3("https://rpc.sepolia.org")
 	if err != nil {
 		return false, fmt.Errorf("connecting to sepolia: %w", err)

@@ -612,7 +612,7 @@ func (e *Engine) Update(inp *input.Input) error {
 		} else {
 			e.musicManager.GetPlayer(music.BossV1).Pause()
 			p := e.musicManager.GetPlayer(music.Background)
-			//p.Play()
+			p.Play()
 			if !p.IsPlaying() {
 				if err := p.Rewind(); err != nil {
 					panic(err)
