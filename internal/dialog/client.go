@@ -16,7 +16,6 @@ func (c *ClientDialog) Greeting() {
 
 func (c *ClientDialog) Feed(_ string) {
 	// No need to feed.
-	return
 }
 
 func (c *ClientDialog) State() *State {

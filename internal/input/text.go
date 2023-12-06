@@ -2,8 +2,9 @@ package input
 
 import (
 	"bufio"
-	"golang.org/x/image/font"
 	"strings"
+
+	"golang.org/x/image/font"
 )
 
 func WrapLine(t string, face font.Face, width int) (lines []string) {
@@ -29,7 +30,7 @@ func WrapLine(t string, face font.Face, width int) (lines []string) {
 	return
 }
 
-func AutoWrap(t string, face font.Face, width int) string {
+func AutoWrap(t string, face font.Face, width int) []string {
 	var lines []string
 
 	lineScan := bufio.NewScanner(strings.NewReader(t))
@@ -38,5 +39,5 @@ func AutoWrap(t string, face font.Face, width int) string {
 		lines = append(lines, WrapLine(lineScan.Text(), face, width)...)
 	}
 
-	return strings.Join(lines, "\n")
+	return lines
 }

@@ -2,9 +2,10 @@ package dialog
 
 import (
 	"fmt"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/eth"
 	"strconv"
 	"strings"
+
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/eth"
 )
 
 const (
@@ -15,7 +16,7 @@ const (
 
 type userInput struct {
 	address string
-	tokenId int
+	tokenID int
 }
 
 func NewCapy(token string) *Capy {
@@ -53,10 +54,10 @@ func (c *Capy) Feed(text string) {
 			c.dialogState.Text += "\nToken id must be a number, try again!"
 			return
 		}
-		c.userInput.tokenId = n
+		c.userInput.tokenID = n
 		c.state = TokenInEntered
 
-		win, err := eth.Check(c.userInput.address, c.userInput.tokenId, c.Token)
+		win, err := eth.Check(c.userInput.address, c.userInput.tokenID, c.Token)
 		if err != nil {
 			c.dialogState.Text += fmt.Sprintf("\nError: %v. Please try again", err)
 			return
@@ -75,6 +76,6 @@ func (c *Capy) State() *State {
 	return &c.dialogState
 }
 
-func (c *Capy) SetState(s *State) {
+func (c *Capy) SetState(_ *State) {
 	// No need.
 }

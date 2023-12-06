@@ -11,7 +11,7 @@ import (
 
 type NPC struct {
 	*object.Object
-	Dialog      dialog.Dialog
+	Dialog      dialog.Dialog `msgpack:"-"`
 	Image       *ebiten.Image `msgpack:"-"`
 	DialogImage *ebiten.Image `msgpack:"-"`
 	LinkedItem  *item.Item    `msgpack:"-"`
