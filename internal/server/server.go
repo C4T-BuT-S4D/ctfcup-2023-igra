@@ -34,7 +34,6 @@ type GameServer struct {
 	round        int64
 	mu           sync.Mutex
 	lastResponse *gameserverpb.InventoryResponse
-	isWin        bool
 }
 
 func (g *GameServer) Ping(context.Context, *gameserverpb.PingRequest) (*gameserverpb.PingResponse, error) {
@@ -84,6 +83,7 @@ func (g *GameServer) ProcessEvent(stream gameserverpb.GameServerService_ProcessE
 			return status.Error(codes.InvalidArgument, "event is nil")
 		}
 		if err := eng.ValidateChecksum(req.Checksum); err != nil {
+			g.game.WasCheating = true
 			return status.Errorf(codes.InvalidArgument, "invalid checksum: %v", err)
 		}
 

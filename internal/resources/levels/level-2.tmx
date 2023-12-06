@@ -312,11 +312,13 @@
   <object id="164" name="magic quote" type="item" x="8352" y="6976" width="32" height="32">
    <properties>
     <property name="important" type="bool" value="true"/>
+    <property name="sprite" value="quote"/>
    </properties>
   </object>
   <object id="165" name="jnovikov accordion" type="item" x="10976" y="8288" width="32" height="32">
    <properties>
     <property name="important" type="bool" value="true"/>
+    <property name="sprite" value="accordion"/>
    </properties>
   </object>
   <object id="166" name="boss-lobby" type="portal" x="9088" y="8512" width="32" height="32">
@@ -344,6 +346,7 @@
   <object id="176" name="kekov glasses" type="item" x="10144" y="6432" width="32" height="32">
    <properties>
     <property name="important" type="bool" value="true"/>
+    <property name="sprite" value="glasses"/>
    </properties>
   </object>
   <object id="177" name="slonser-task" type="npc" x="6816" y="8576" width="64" height="64">
@@ -363,6 +366,7 @@
   <object id="179" name="falamous microphone" type="item" x="4896" y="8192" width="32" height="32">
    <properties>
     <property name="important" type="bool" value="true"/>
+    <property name="sprite" value="micro"/>
    </properties>
   </object>
  </objectgroup>

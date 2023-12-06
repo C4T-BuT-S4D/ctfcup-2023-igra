@@ -39,10 +39,11 @@ func main() {
 	round := pflag.IntP("round", "r", 1, "game round")
 	pflag.Parse()
 
-	game := server.NewGame(*snapshotsDir)
-	smng := sprites.NewManager()
 	fntmng := fonts.NewManager()
+	smng := sprites.NewManager()
 	dialogProvider := &dialog.StandardProvider{}
+
+	game := server.NewGame(*snapshotsDir, fntmng)
 
 	gs := server.New(game, func() (*engine.Engine, error) {
 		files, err := os.ReadDir(*snapshotsDir)

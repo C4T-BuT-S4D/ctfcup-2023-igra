@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" width="400" height="300" tilewidth="32" tileheight="32" infinite="0" nextlayerid="7" nextobjectid="596">
+<map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" width="400" height="300" tilewidth="32" tileheight="32" infinite="0" nextlayerid="7" nextobjectid="598">
  <tileset firstgid="1" source="../tiles/ice.tsx"/>
  <layer id="1" name="tiles" width="400" height="300">
   <data encoding="csv">
@@ -712,11 +712,13 @@
   <object id="588" name="roman iphone" type="item" x="3200" y="4256" width="32" height="32">
    <properties>
     <property name="important" type="bool" value="true"/>
+    <property name="sprite" value="iphone"/>
    </properties>
   </object>
   <object id="589" name="alagunto adrenalin coffee" type="item" x="10560" y="896" width="32" height="32">
    <properties>
     <property name="important" type="bool" value="true"/>
+    <property name="sprite" value="redbull"/>
    </properties>
   </object>
   <object id="590" name="death-end" type="portal" x="10624" y="896" width="32" height="32">
@@ -741,5 +743,6 @@
     <property name="portal-to" value="boss-2"/>
    </properties>
   </object>
+  <object id="596" x="4288" y="864" width="64" height="64"/>
  </objectgroup>
 </map>
