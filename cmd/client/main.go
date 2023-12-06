@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/grpcauth"
+	"os"
 	"os/signal"
 	"syscall"
 
@@ -175,7 +177,20 @@ func main() {
 
 	var client gameserverpb.GameServerServiceClient
 	if !*standalone {
-		conn, err := grpc.DialContext(ctx, *serverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		opts := []grpc.DialOption{
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		}
+
+		if authToken := os.Getenv("AUTH_TOKEN"); authToken != "" {
+			interceptor := grpcauth.NewClientInterceptor(authToken)
+			opts = append(
+				opts,
+				grpc.WithUnaryInterceptor(interceptor.Unary()),
+				grpc.WithStreamInterceptor(interceptor.Stream()),
+			)
+		}
+
+		conn, err := grpc.DialContext(ctx, *serverAddr, opts...)
 		if err != nil {
 			logrus.Fatalf("Failed to connect to server: %v", err)
 		}

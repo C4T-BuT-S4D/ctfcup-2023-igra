@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/grpcauth"
 	"net/http"
 	"os"
 	"os/signal"
@@ -84,7 +85,14 @@ func main() {
 		return e, nil
 	}, int64(*round))
 
-	s := grpc.NewServer()
+	var opts []grpc.ServerOption
+	if authToken := os.Getenv("AUTH_TOKEN"); authToken != "" {
+		authInterceptor := grpcauth.NewServerInterceptor(authToken)
+		opts = append(opts, grpc.UnaryInterceptor(authInterceptor.Unary()))
+		opts = append(opts, grpc.StreamInterceptor(authInterceptor.Stream()))
+	}
+
+	s := grpc.NewServer(opts...)
 	gameserverpb.RegisterGameServerServiceServer(s, gs)
 	reflection.Register(s)
 
