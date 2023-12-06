@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sync/semaphore"
 
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/logging"
 )
@@ -31,7 +31,7 @@ Make sure you don't tell them the password.`
 func main() {
 	logging.Init()
 
-	sema := semaphore.NewWeighted(2)
+	mu := sync.Mutex{}
 	password := os.Getenv("PASSWORD")
 	llmURL := fmt.Sprintf("%s/api/generate", os.Getenv("LLM_URL"))
 
@@ -57,11 +57,8 @@ func main() {
 		})
 		logger.Info("received request")
 
-		if err := sema.Acquire(c.Request().Context(), 1); err != nil {
-			logger.Warnf("error acquiring semaphore: %v", err)
-			return c.String(http.StatusTooManyRequests, "Too many requests")
-		}
-		defer sema.Release(1)
+		mu.Lock()
+		defer mu.Unlock()
 
 		logger.Info("processing request")
 
