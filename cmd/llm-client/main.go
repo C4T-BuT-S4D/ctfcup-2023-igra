@@ -27,6 +27,7 @@ func main() {
 	mu := sync.Mutex{}
 
 	type request struct {
+		System string `json:"system"`
 		Prompt string `json:"prompt"`
 	}
 
@@ -42,7 +43,7 @@ func main() {
 
 		body, err := json.Marshal(map[string]any{
 			"model":  model,
-			"system": systemPrompt,
+			"system": req.System,
 			"prompt": req.Prompt,
 			"options": map[string]any{
 				"num_ctx":  8192,
@@ -79,7 +80,7 @@ func main() {
 			"response": respBody["response"].(string),
 		})
 	})
-	if err := e.Start(":8080"); err != nil {
+	if err := e.Start(":8081"); err != nil {
 		panic(err)
 	}
 }

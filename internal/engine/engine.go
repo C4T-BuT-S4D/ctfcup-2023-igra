@@ -640,7 +640,9 @@ func (e *Engine) Update(inp *input.Input) error {
 				}
 			case ebiten.KeyEnter:
 				// enter
-				e.activeNPC.Dialog.Feed(strings.Join(e.dialogInputBuffer, ""))
+				if err := e.activeNPC.Dialog.Feed(strings.Join(e.dialogInputBuffer, "")); err != nil {
+					return fmt.Errorf("feeding dialog: %w", err)
+				}
 				e.dialogInputBuffer = e.dialogInputBuffer[:0]
 			default:
 				e.dialogInputBuffer = append(e.dialogInputBuffer, input.Key(c).String())
