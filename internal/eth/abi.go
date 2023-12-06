@@ -477,3 +477,5 @@ const abiStr = `[
       "type": "function"
     }
   ]`
+
+const contractAddr = "0x4e6682698f10918ada5c45c58c24584c27d1ac59"
