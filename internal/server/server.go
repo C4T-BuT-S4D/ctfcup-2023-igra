@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"sync"
 
 	"github.com/sirupsen/logrus"
 	"go.uber.org/atomic"
@@ -15,20 +16,24 @@ import (
 	gameserverpb "github.com/c4t-but-s4d/ctfcup-2023-igra/proto/go/gameserver"
 )
 
-func New(game *Game, factory engine.Factory) *GameServer {
+func New(game *Game, factory engine.Factory, round int64) *GameServer {
 	return &GameServer{
 		factory:    factory,
 		game:       game,
 		numStreams: atomic.NewInt64(0),
+		round:      round,
 	}
 }
 
 type GameServer struct {
 	gameserverpb.UnimplementedGameServerServiceServer
 
-	factory    engine.Factory
-	numStreams *atomic.Int64
-	game       *Game
+	factory      engine.Factory
+	numStreams   *atomic.Int64
+	game         *Game
+	round        int64
+	mu           sync.Mutex
+	lastResponse *gameserverpb.InventoryResponse
 }
 
 func (g *GameServer) Ping(context.Context, *gameserverpb.PingRequest) (*gameserverpb.PingResponse, error) {
@@ -100,10 +105,15 @@ func (g *GameServer) ProcessEvent(stream gameserverpb.GameServerService_ProcessE
 }
 
 func (g *GameServer) GetInventory(context.Context, *gameserverpb.InventoryRequest) (*gameserverpb.InventoryResponse, error) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
 	eng := g.game.getEngine()
-	if eng == nil {
-		return &gameserverpb.InventoryResponse{Inventory: &gameserverpb.Inventory{}}, nil
+	if eng != nil {
+		g.lastResponse = &gameserverpb.InventoryResponse{Inventory: eng.Player.Inventory.ToProto(), Round: int64(g.round)}
+	} else if g.lastResponse == nil {
+		g.lastResponse = &gameserverpb.InventoryResponse{Round: int64(g.round)}
 	}
 
-	return &gameserverpb.InventoryResponse{Inventory: eng.Player.Inventory.ToProto()}, nil
+	return g.lastResponse, nil
 }

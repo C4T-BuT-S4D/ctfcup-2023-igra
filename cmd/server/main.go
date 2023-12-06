@@ -35,6 +35,7 @@ func main() {
 	level := pflag.StringP("level", "l", "", "level to load")
 	snapshotsDir := pflag.String("snapshots-dir", "snapshots", "directory to save snapshots to")
 	headless := pflag.BoolP("headless", "h", false, "disable GUI")
+	round := pflag.IntP("round", "r", 1, "game round")
 	pflag.Parse()
 
 	game := server.NewGame(*snapshotsDir)
@@ -81,7 +82,7 @@ func main() {
 			return nil, fmt.Errorf("creating engine without snapshot: %w", err)
 		}
 		return e, nil
-	})
+	}, int64(*round))
 
 	s := grpc.NewServer()
 	gameserverpb.RegisterGameServerServiceServer(s, gs)

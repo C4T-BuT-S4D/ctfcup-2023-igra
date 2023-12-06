@@ -58,6 +58,7 @@ message Inventory {
 
 message InventoryResponse {
   Inventory inventory = 1;
+  int64 round = 2;
 }
 
 service GameServerService {

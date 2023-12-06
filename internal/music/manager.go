@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/resources"
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/audio/mp3"
+
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/resources"
 )
 
 type Manager struct {
