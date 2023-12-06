@@ -606,7 +606,7 @@ func (e *Engine) Update(inp *input.Input) error {
 	e.Tick++
 
 	if e.musicManager != nil {
-		if e.EnteredBossV1 && !e.BossV1.Dead && !e.Paused {
+		if e.EnteredBossV1 && !e.BossV1.Dead && !e.Paused && !e.Player.IsDead() {
 			e.musicManager.GetPlayer(music.Background).Pause()
 			e.musicManager.GetPlayer(music.BossV1).Play()
 		} else {
