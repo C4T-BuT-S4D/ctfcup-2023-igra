@@ -5,6 +5,7 @@ go 1.21
 require (
 	github.com/Rulox/ebitmx v0.0.0-20210328203036-c183f6244342
 	github.com/c4t-but-s4d/cbs-go v0.0.3
+	github.com/google/uuid v1.4.0
 	github.com/hajimehoshi/ebiten/v2 v2.6.2
 	github.com/labstack/echo/v4 v4.11.3
 	github.com/salviati/go-tmx v0.0.0-20180901011116-8dae25beffeb
