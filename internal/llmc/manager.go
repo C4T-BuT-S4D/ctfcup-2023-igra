@@ -4,10 +4,9 @@ import (
 	"context"
 
 	"github.com/samber/lo"
+	"go.uber.org/atomic"
 
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/pkg/sync"
-
-	"go.uber.org/atomic"
 )
 
 type Manager struct {

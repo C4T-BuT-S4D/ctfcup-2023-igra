@@ -654,9 +654,9 @@ func (e *Engine) Update(inp *input.Input) error {
 			switch c {
 			case ebiten.KeyUp:
 				// TODO(scroll up)
-				e.dialogControl.scroll -= 1
+				e.dialogControl.scroll--
 			case ebiten.KeyDown:
-				e.dialogControl.scroll += 1
+				e.dialogControl.scroll++
 			case ebiten.KeyBackspace:
 				// backspace
 				if len(e.dialogControl.inputBuffer) > 0 {

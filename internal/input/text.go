@@ -2,8 +2,9 @@ package input
 
 import (
 	"bufio"
-	"golang.org/x/image/font"
 	"strings"
+
+	"golang.org/x/image/font"
 )
 
 func WrapLine(t string, face font.Face, width int) (lines []string) {

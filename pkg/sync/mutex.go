@@ -1,8 +1,6 @@
 package sync
 
-import (
-	"context"
-)
+import "context"
 
 type CtxMutex struct {
 	ch chan struct{}

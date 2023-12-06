@@ -55,7 +55,9 @@ func (l *LLM) checkIsFlag(text string) bool {
 		return false
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	return resp.StatusCode == http.StatusOK
 }
 
@@ -63,7 +65,7 @@ func (l *LLM) Feed(text string) {
 	l.state.Text = fmt.Sprintf("> %s\n", text)
 
 	if l.checkIsFlag(text) {
-		l.state.Text += fmt.Sprintf("You defeated me!!!\n")
+		l.state.Text += "You defeated me!!!\n"
 		l.state.GaveItem = true
 		l.state.Finished = true
 		return
@@ -82,7 +84,9 @@ func (l *LLM) Feed(text string) {
 		l.state.Text += fmt.Sprintf("Error: %v\n", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	var respBody map[string]string
 	if err := json.NewDecoder(resp.Body).Decode(&respBody); err != nil {
@@ -91,13 +95,12 @@ func (l *LLM) Feed(text string) {
 	}
 
 	l.state.Text += fmt.Sprintf("%s\n", respBody["response"])
-	return
 }
 
-func (L *LLM) State() *State {
-	return &L.state
+func (l *LLM) State() *State {
+	return &l.state
 }
 
-func (L *LLM) SetState(s *State) {
+func (l *LLM) SetState(_ *State) {
 	// No need for.
 }

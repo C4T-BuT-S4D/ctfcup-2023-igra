@@ -14,7 +14,7 @@ var (
 	ErrOwnerNotString  = errors.New("owner is not address")
 )
 
-func Check(address string, tokenId int, token string) (bool, error) {
+func Check(address string, tokenID int, token string) (bool, error) {
 	w3, err := web3.NewWeb3("https://rpc.sepolia.org")
 	if err != nil {
 		return false, fmt.Errorf("connecting to sepolia: %w", err)
@@ -25,7 +25,7 @@ func Check(address string, tokenId int, token string) (bool, error) {
 		return false, fmt.Errorf("creating contract client: %w", err)
 	}
 
-	secret, err := contract.Call("secret", big.NewInt(int64(tokenId)))
+	secret, err := contract.Call("secret", big.NewInt(int64(tokenID)))
 	if err != nil {
 		return false, fmt.Errorf("getting secret for token: %w", err)
 	}
@@ -39,7 +39,7 @@ func Check(address string, tokenId int, token string) (bool, error) {
 		return false, nil
 	}
 
-	owner, err := contract.Call("ownerOf", big.NewInt(int64(tokenId)))
+	owner, err := contract.Call("ownerOf", big.NewInt(int64(tokenID)))
 	if err != nil {
 		return false, fmt.Errorf("getting owner of token: %w", err)
 	}
