@@ -48,11 +48,18 @@ import (
 	_ "image/png"
 )
 
+const dialogShowLines = 12
+
 type Factory func() (*Engine, error)
 
 type Config struct {
 	SnapshotsDir string
 	Level        string
+}
+
+type dialogControl struct {
+	inputBuffer []rune
+	scroll      int
 }
 
 type Engine struct {
@@ -72,13 +79,13 @@ type Engine struct {
 
 	StartSnapshot *Snapshot `json:"-" msgpack:"-"`
 
-	fontsManager      *fonts.Manager
-	spriteManager     *sprites.Manager
-	musicManager      *music.Manager
-	snapshotsDir      string
-	playerSpawn       *geometry.Point
-	activeNPC         *npc.NPC
-	dialogInputBuffer []string
+	fontsManager  *fonts.Manager
+	spriteManager *sprites.Manager
+	musicManager  *music.Manager
+	snapshotsDir  string
+	playerSpawn   *geometry.Point
+	activeNPC     *npc.NPC
+	dialogControl dialogControl
 
 	Paused bool   `json:"-" msgpack:"paused"`
 	Tick   int    `json:"-" msgpack:"tick"`
@@ -486,22 +493,26 @@ func (e *Engine) drawNPCDialog(screen *ebiten.Image) {
 	op.GeoM.Translate(camera.WIDTH/2+camera.WIDTH/8, camera.HEIGHT/2)
 	screen.DrawImage(e.activeNPC.DialogImage, op)
 
-	// TODO(jnovikov): show only last X lines ?
 	// Draw dialog text.
 	dtx, dty := ibx+camera.WIDTH/32, iby+camera.HEIGHT/32
 	face := e.fontsManager.Get(fonts.Dialog)
 	txt := e.activeNPC.Dialog.State().Text
-	txt = input.AutoWrap(txt, face, ibw-camera.WIDTH/32)
 
-	text.Draw(screen, txt, face, int(dtx), int(dty), colorWhite)
+	lines := input.AutoWrap(txt, face, ibw-camera.WIDTH/32)
+	e.dialogControl.scroll = max(min(e.dialogControl.scroll, len(lines)-1), 0)
+
+	l := e.dialogControl.scroll
+	r := min(e.dialogControl.scroll+dialogShowLines, len(lines))
+
+	visibleLines := lines[l:r]
+	text.Draw(screen, strings.Join(visibleLines, "\n"), face, int(dtx), int(dty), colorWhite)
 
 	// Draw dialog input buffer.
-	if len(e.dialogInputBuffer) > 0 {
-		nLines := strings.Count(txt, "\n")
-		dtbx, dtby := dtx, dty+float64(nLines*face.Metrics().Height.Floor())+1.0*float64(face.Metrics().Height.Floor())
+	if len(e.dialogControl.inputBuffer) > 0 {
+		dtbx, dtby := dtx, dty+float64((len(visibleLines)-1)*face.Metrics().Height.Floor())+1.0*float64(face.Metrics().Height.Floor())
 		c := color.RGBA{R: 0x00, G: 0xff, B: 0xff, A: 0xff}
-		x := input.AutoWrap(strings.Join(e.dialogInputBuffer, ""), face, ibw-camera.WIDTH/32)
-		text.Draw(screen, x, face, int(dtbx), int(dtby), c)
+		x := input.AutoWrap(string(e.dialogControl.inputBuffer), face, ibw-camera.WIDTH/32)
+		text.Draw(screen, strings.Join(x, "\n"), face, int(dtbx), int(dtby), c)
 	}
 }
 
@@ -627,7 +638,7 @@ func (e *Engine) Update(inp *input.Input) error {
 	if e.activeNPC != nil {
 		if inp.IsKeyNewlyPressed(ebiten.KeyEscape) {
 			e.activeNPC = nil
-			e.dialogInputBuffer = e.dialogInputBuffer[:0]
+			e.dialogControl.inputBuffer = e.dialogControl.inputBuffer[:0]
 			return nil
 		}
 		if e.activeNPC.Dialog.State().GaveItem {
@@ -641,17 +652,22 @@ func (e *Engine) Update(inp *input.Input) error {
 		if len(pk) > 0 && !e.activeNPC.Dialog.State().Finished {
 			c := pk[0]
 			switch c {
+			case ebiten.KeyUp:
+				// TODO(scroll up)
+				e.dialogControl.scroll -= 1
+			case ebiten.KeyDown:
+				e.dialogControl.scroll += 1
 			case ebiten.KeyBackspace:
 				// backspace
-				if len(e.dialogInputBuffer) > 0 {
-					e.dialogInputBuffer = e.dialogInputBuffer[:len(e.dialogInputBuffer)-1]
+				if len(e.dialogControl.inputBuffer) > 0 {
+					e.dialogControl.inputBuffer = e.dialogControl.inputBuffer[:len(e.dialogControl.inputBuffer)-1]
 				}
 			case ebiten.KeyEnter:
 				// enter
-				e.activeNPC.Dialog.Feed(strings.Join(e.dialogInputBuffer, ""))
-				e.dialogInputBuffer = e.dialogInputBuffer[:0]
+				e.activeNPC.Dialog.Feed(string(e.dialogControl.inputBuffer))
+				e.dialogControl.inputBuffer = e.dialogControl.inputBuffer[:0]
 			default:
-				e.dialogInputBuffer = append(e.dialogInputBuffer, input.Key(c).String())
+				e.dialogControl.inputBuffer = append(e.dialogControl.inputBuffer, input.Key(c).Rune())
 			}
 		}
 

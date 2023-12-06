@@ -4,19 +4,21 @@ import "github.com/hajimehoshi/ebiten/v2"
 
 type Key ebiten.Key
 
-func (k Key) String() string {
+func (k Key) Rune() rune {
 	switch ebiten.Key(k) {
 	case ebiten.KeyPeriod:
-		return "."
+		return '.'
 	case ebiten.KeySpace:
-		return " "
+		return ' '
 	case ebiten.KeyComma:
-		return ","
+		return ','
+	case ebiten.KeySlash:
+		return '?'
 	default:
 		ebase, base, ek := ebiten.KeyA, 'A', ebiten.Key(k)
 		if ek >= ebiten.KeyDigit0 && ek <= ebiten.KeyDigit9 {
 			ebase, base = ebiten.KeyDigit0, '0'
 		}
-		return string(base + rune(ek-ebase))
+		return base + rune(ek-ebase)
 	}
 }

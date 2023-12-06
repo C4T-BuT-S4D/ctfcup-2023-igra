@@ -12,58 +12,85 @@ import (
 const timeout time.Duration = 30 * time.Second
 
 type LLM struct {
-	Prompt string
-	Flag   string
-	Intro  string
-	URL    string
-	state  State
+	Intro string
+	URL   string
+	Token string
+	state State
 }
 
-func (L *LLM) Greeting() {
-	L.state.Text = L.Intro
+func (l *LLM) Greeting() {
+	l.state.Text = l.Intro
 }
 
-func (L *LLM) Feed(text string) {
-	if text == L.Flag {
-		L.state.GaveItem = true
-		L.state.Finished = true
-		L.state.Text += "\nYou have defeated me!"
-		return
-	}
-
-	body, err := json.Marshal(map[string]any{
-		"system": L.Prompt,
-		"prompt": text,
-	})
-	if err != nil {
-		L.state.Text += fmt.Sprintf("\nError: %v", err)
-		return
-	}
-
+func (l *LLM) callProxy(url string, body []byte) (*http.Response, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	llmReq, err := http.NewRequestWithContext(ctx, "POST", L.URL+"/api/generate", bytes.NewBuffer(body))
+	llmReq, err := http.NewRequestWithContext(ctx, "POST", l.URL+url, bytes.NewBuffer(body))
 	if err != nil {
-		L.state.Text += fmt.Sprintf("\nError: %v", err)
-		return
+		return nil, fmt.Errorf("creating request: %w", err)
 	}
 	llmReq.Header.Set("Content-Type", "application/json")
+	llmReq.Header.Set("X-Team", l.Token)
 
 	resp, err := http.DefaultClient.Do(llmReq)
 	if err != nil {
-		L.state.Text += fmt.Sprintf("\nError: %v", err)
+		return nil, fmt.Errorf("sending request: %w", err)
+	}
+	return resp, nil
+}
+
+func (l *LLM) checkIsFlag(text string) bool {
+	body, err := json.Marshal(map[string]string{
+		"password": text,
+	})
+	if err != nil {
+		l.state.Text += fmt.Sprintf("Error: %v\n", err)
+		return false
+	}
+
+	resp, err := l.callProxy("/api/check_password", body)
+	if err != nil {
+		l.state.Text += fmt.Sprintf("Error: %v\n", err)
+		return false
+	}
+
+	defer resp.Body.Close()
+	return resp.StatusCode == http.StatusOK
+}
+
+func (l *LLM) Feed(text string) {
+	l.state.Text = fmt.Sprintf("> %s\n", text)
+
+	if l.checkIsFlag(text) {
+		l.state.Text += fmt.Sprintf("You defeated me!!!\n")
+		l.state.GaveItem = true
+		l.state.Finished = true
+		return
+	}
+
+	body, err := json.Marshal(map[string]string{
+		"prompt": text,
+	})
+	if err != nil {
+		l.state.Text += fmt.Sprintf("Error: %v\n", err)
+		return
+	}
+
+	resp, err := l.callProxy("/api/generate", body)
+	if err != nil {
+		l.state.Text += fmt.Sprintf("Error: %v\n", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	var respBody map[string]string
 	if err := json.NewDecoder(resp.Body).Decode(&respBody); err != nil {
-		L.state.Text += fmt.Sprintf("\nError: %v", err)
+		l.state.Text += fmt.Sprintf("Error: %v\n", err)
 		return
 	}
 
-	L.state.Text = fmt.Sprintf("> %s\n%s", text, respBody["response"])
+	l.state.Text += fmt.Sprintf("%s\n", respBody["response"])
 	return
 }
 
