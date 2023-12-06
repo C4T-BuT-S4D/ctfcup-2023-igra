@@ -52,7 +52,7 @@ func main() {
 		var snapshotFilename string
 
 		for _, f := range files {
-			if !f.Type().IsRegular() || !strings.HasPrefix(f.Name(), "snapshot") {
+			if !f.Type().IsRegular() || !strings.HasPrefix(f.Name(), fmt.Sprintf("%s_%s_", "snapshot", *level)) {
 				continue
 			}
 

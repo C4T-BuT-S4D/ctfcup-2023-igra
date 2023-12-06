@@ -58,7 +58,7 @@ type Config struct {
 type Engine struct {
 	Tiles        []*tiles.StaticTile `json:"-" msgpack:"-"`
 	Camera       *camera.Camera      `json:"-" msgpack:"camera"`
-	Player       *player.Player      `json:"player" msgpack:"player"`
+	Player       *player.Player      `json:"-" msgpack:"player"`
 	Items        []*item.Item        `json:"items" msgpack:"items"`
 	Portals      []*portal.Portal    `json:"-" msgpack:"portals"`
 	Spikes       []*damage.Spike     `json:"-" msgpack:"spikes"`
@@ -80,8 +80,9 @@ type Engine struct {
 	activeNPC         *npc.NPC
 	dialogInputBuffer []string
 
-	Paused bool `json:"-" msgpack:"paused"`
-	Tick   int  `json:"-" msgpack:"tick"`
+	Paused bool   `json:"-" msgpack:"paused"`
+	Tick   int    `json:"-" msgpack:"tick"`
+	Level  string `json:"-" msgpack:"level"`
 }
 
 func getProperties(o *tmx.Object) map[string]string {
@@ -366,6 +367,7 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 		musicManager:  musicManager,
 		snapshotsDir:  config.SnapshotsDir,
 		playerSpawn:   playerPos,
+		Level:         config.Level,
 	}, nil
 }
 
@@ -379,6 +381,12 @@ func NewFromSnapshot(config Config, snapshot *Snapshot, spritesManager *sprites.
 
 	if err := json.Unmarshal(snapshot.Data, e); err != nil {
 		return nil, fmt.Errorf("applying snapshot: %w", err)
+	}
+
+	for _, it := range e.Items {
+		if it.Collected {
+			e.Player.Inventory.Items = append(e.Player.Inventory.Items, it)
+		}
 	}
 
 	return e, nil
@@ -413,9 +421,6 @@ func (e *Engine) Reset() {
 	e.EnteredBossV1 = false
 	e.Tick = 0
 	if e.musicManager != nil {
-		if err := e.musicManager.GetPlayer(music.Background).Rewind(); err != nil {
-			panic(err)
-		}
 		if err := e.musicManager.GetPlayer(music.BossV1).Rewind(); err != nil {
 			panic(err)
 		}
@@ -438,7 +443,7 @@ func (e *Engine) SaveSnapshot(snapshot *Snapshot) error {
 		return nil
 	}
 
-	filename := fmt.Sprintf("snapshot_%s", time.Now().UTC().Format("2006-01-02T15:04:05.999999999"))
+	filename := fmt.Sprintf("snapshot_%s_%s", e.Level, time.Now().UTC().Format("2006-01-02T15:04:05.999999999"))
 
 	if err := os.WriteFile(filepath.Join(e.snapshotsDir, filename), snapshot.Data, 0o400); err != nil {
 		return fmt.Errorf("writing snapshot file: %w", err)
@@ -563,7 +568,6 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 				screen.DrawImage(b.Image, op)
 			}
 		default:
-			// not an item.
 		}
 	}
 
@@ -601,7 +605,7 @@ func (e *Engine) Update(inp *input.Input) error {
 	e.Tick++
 
 	if e.musicManager != nil {
-		if e.EnteredBossV1 && !e.BossV1.Dead {
+		if e.EnteredBossV1 && !e.BossV1.Dead && !e.Paused {
 			e.musicManager.GetPlayer(music.Background).Pause()
 			e.musicManager.GetPlayer(music.BossV1).Play()
 		} else {
@@ -660,6 +664,9 @@ func (e *Engine) Update(inp *input.Input) error {
 		}
 	} else if inp.IsKeyNewlyPressed(ebiten.KeyP) {
 		e.Paused = true
+		if e.musicManager != nil {
+			e.musicManager.GetPlayer(music.BossV1).Pause()
+		}
 		e.Player.Speed = &geometry.Vector{}
 	}
 

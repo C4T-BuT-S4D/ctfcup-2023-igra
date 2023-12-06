@@ -21,19 +21,19 @@ const (
 )
 
 type Player struct {
-	*object.Object    `json:"-"`
-	*physics.Physical `json:"-"`
+	*object.Object
+	*physics.Physical
 
 	animations               map[string][]*ebiten.Image
 	currentAnimationName     string
 	currentAnimationIndex    int
 	currentAnimationDuration int
 
-	Inventory *Inventory `json:"inventory"`
+	Inventory *Inventory
 
-	LooksRight bool `json:"-"`
-	OnGround   bool `json:"-"`
-	Health     int  `json:"-"`
+	LooksRight bool
+	OnGround   bool
+	Health     int
 }
 
 func New(origin *geometry.Point, spriteManager *sprites.Manager) (*Player, error) {
