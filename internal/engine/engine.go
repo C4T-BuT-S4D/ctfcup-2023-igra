@@ -522,7 +522,8 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 		case object.BossV1:
 			b := c.(*boss.V1)
 			op.GeoM.Translate(-boss.BossV1Width/2, -boss.BossV1Height/2)
-			op.GeoM.Rotate(b.RotateAngle)
+			r, _ := b.RotateAngle.Float64()
+			op.GeoM.Rotate(r)
 			op.GeoM.Translate(boss.BossV1Width/2, boss.BossV1Height/2)
 		case object.EnemyBullet:
 			op.GeoM.Scale(4, 4)
@@ -934,7 +935,8 @@ func (e *Engine) CheckBossV1() {
 	e.BossV1.Tick()
 	e.EnemyBullets = append(e.EnemyBullets, e.BossV1.CreateBullets()...)
 
-	e.BossV1.Move(e.BossV1.GetNextMove())
+	x := e.BossV1.GetNextMove()
+	e.BossV1.MoveTo(&geometry.Point{X: x, Y: e.BossV1.Origin.Y})
 }
 
 func (e *Engine) ActiveNPC() *npc.NPC {
