@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" width="400" height="300" tilewidth="32" tileheight="32" infinite="0" nextlayerid="7" nextobjectid="293">
+<map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" width="400" height="300" tilewidth="32" tileheight="32" infinite="0" nextlayerid="7" nextobjectid="384">
  <tileset firstgid="1" source="../tiles/ice.tsx"/>
  <layer id="1" name="tiles" width="400" height="300">
   <data encoding="csv">
@@ -448,5 +448,86 @@
   <object id="290" type="spike" x="9472" y="768" width="32" height="32"/>
   <object id="291" type="spike" x="9504" y="832" width="32" height="32"/>
   <object id="292" type="spike" x="9504" y="864" width="32" height="32"/>
+  <object id="293" type="spike" x="9056" y="384" width="32" height="32"/>
+  <object id="294" type="spike" x="9056" y="352" width="32" height="32"/>
+  <object id="295" type="spike" x="9472" y="352" width="32" height="32"/>
+  <object id="296" type="spike" x="9472" y="384" width="32" height="32"/>
+  <object id="307" type="spike" x="9472" y="416" width="32" height="32"/>
+  <object id="308" type="spike" x="9504" y="448" width="32" height="32"/>
+  <object id="309" type="spike" x="9504" y="480" width="32" height="32"/>
+  <object id="310" type="spike" x="9504" y="512" width="32" height="32"/>
+  <object id="311" type="spike" x="9536" y="544" width="32" height="32"/>
+  <object id="312" type="spike" x="9536" y="576" width="32" height="32"/>
+  <object id="313" type="spike" x="9536" y="608" width="32" height="32"/>
+  <object id="314" type="spike" x="9568" y="640" width="32" height="32"/>
+  <object id="315" type="spike" x="9568" y="672" width="32" height="32"/>
+  <object id="316" type="spike" x="9568" y="704" width="32" height="32"/>
+  <object id="317" type="spike" x="9600" y="736" width="32" height="32"/>
+  <object id="318" type="spike" x="9600" y="768" width="32" height="32"/>
+  <object id="319" type="spike" x="9600" y="800" width="32" height="32"/>
+  <object id="320" type="spike" x="9632" y="832" width="32" height="32"/>
+  <object id="321" type="spike" x="9152" y="352" width="32" height="32"/>
+  <object id="322" type="spike" x="9152" y="384" width="32" height="32"/>
+  <object id="323" type="spike" x="9152" y="416" width="32" height="32"/>
+  <object id="324" type="spike" x="9120" y="448" width="32" height="32"/>
+  <object id="325" type="spike" x="9120" y="480" width="32" height="32"/>
+  <object id="326" type="spike" x="9120" y="512" width="32" height="32"/>
+  <object id="327" type="spike" x="9088" y="544" width="32" height="32"/>
+  <object id="328" type="spike" x="9088" y="576" width="32" height="32"/>
+  <object id="329" type="spike" x="9088" y="608" width="32" height="32"/>
+  <object id="330" type="spike" x="9088" y="352" width="32" height="32"/>
+  <object id="331" type="spike" x="9120" y="352" width="32" height="32"/>
+  <object id="332" type="spike" x="9120" y="384" width="32" height="32"/>
+  <object id="333" type="spike" x="9120" y="416" width="32" height="32"/>
+  <object id="334" type="spike" x="9088" y="384" width="32" height="32"/>
+  <object id="335" type="spike" x="9088" y="416" width="32" height="32"/>
+  <object id="336" type="spike" x="9088" y="448" width="32" height="32"/>
+  <object id="337" type="spike" x="9088" y="480" width="32" height="32"/>
+  <object id="338" type="spike" x="9088" y="512" width="32" height="32"/>
+  <object id="339" type="spike" x="9632" y="800" width="32" height="32"/>
+  <object id="340" type="spike" x="9632" y="768" width="32" height="32"/>
+  <object id="341" type="spike" x="9632" y="736" width="32" height="32"/>
+  <object id="342" type="spike" x="9632" y="704" width="32" height="32"/>
+  <object id="343" type="spike" x="9632" y="672" width="32" height="32"/>
+  <object id="344" type="spike" x="9632" y="640" width="32" height="32"/>
+  <object id="345" type="spike" x="9632" y="608" width="32" height="32"/>
+  <object id="346" type="spike" x="9632" y="576" width="32" height="32"/>
+  <object id="347" type="spike" x="9632" y="544" width="32" height="32"/>
+  <object id="348" type="spike" x="9632" y="512" width="32" height="32"/>
+  <object id="349" type="spike" x="9632" y="448" width="32" height="32"/>
+  <object id="350" type="spike" x="9632" y="480" width="32" height="32"/>
+  <object id="351" type="spike" x="9632" y="416" width="32" height="32"/>
+  <object id="352" type="spike" x="9632" y="384" width="32" height="32"/>
+  <object id="353" type="spike" x="9632" y="352" width="32" height="32"/>
+  <object id="354" type="spike" x="9600" y="352" width="32" height="32"/>
+  <object id="355" type="spike" x="9568" y="352" width="32" height="32"/>
+  <object id="356" type="spike" x="9536" y="352" width="32" height="32"/>
+  <object id="357" type="spike" x="9504" y="352" width="32" height="32"/>
+  <object id="358" type="spike" x="9504" y="384" width="32" height="32"/>
+  <object id="359" type="spike" x="9536" y="384" width="32" height="32"/>
+  <object id="360" type="spike" x="9568" y="384" width="32" height="32"/>
+  <object id="361" type="spike" x="9600" y="384" width="32" height="32"/>
+  <object id="362" type="spike" x="9600" y="416" width="32" height="32"/>
+  <object id="363" type="spike" x="9568" y="416" width="32" height="32"/>
+  <object id="364" type="spike" x="9536" y="416" width="32" height="32"/>
+  <object id="365" type="spike" x="9504" y="416" width="32" height="32"/>
+  <object id="366" type="spike" x="9536" y="448" width="32" height="32"/>
+  <object id="367" type="spike" x="9568" y="448" width="32" height="32"/>
+  <object id="368" type="spike" x="9600" y="448" width="32" height="32"/>
+  <object id="369" type="spike" x="9600" y="480" width="32" height="32"/>
+  <object id="370" type="spike" x="9536" y="480" width="32" height="32"/>
+  <object id="371" type="spike" x="9568" y="480" width="32" height="32"/>
+  <object id="372" type="spike" x="9536" y="512" width="32" height="32"/>
+  <object id="373" type="spike" x="9568" y="512" width="32" height="32"/>
+  <object id="374" type="spike" x="9600" y="512" width="32" height="32"/>
+  <object id="375" type="spike" x="9600" y="544" width="32" height="32"/>
+  <object id="376" type="spike" x="9568" y="544" width="32" height="32"/>
+  <object id="377" type="spike" x="9568" y="576" width="32" height="32"/>
+  <object id="378" type="spike" x="9600" y="576" width="32" height="32"/>
+  <object id="379" type="spike" x="9568" y="608" width="32" height="32"/>
+  <object id="380" type="spike" x="9600" y="608" width="32" height="32"/>
+  <object id="381" type="spike" x="9600" y="640" width="32" height="32"/>
+  <object id="382" type="spike" x="9600" y="672" width="32" height="32"/>
+  <object id="383" type="spike" x="9600" y="704" width="32" height="32"/>
  </objectgroup>
 </map>
