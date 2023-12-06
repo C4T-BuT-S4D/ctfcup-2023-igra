@@ -47,6 +47,8 @@ linters-settings:
       - WrapErrorf
       - status.Errorf(
       - status.Error(
+      - (github.com/labstack/echo/v4.Context).JSON
+      - (github.com/labstack/echo/v4.Context).String
   exhaustive:
     default-signifies-exhaustive: true
 

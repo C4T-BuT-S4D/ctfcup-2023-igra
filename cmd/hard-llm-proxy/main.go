@@ -88,14 +88,14 @@ func main() {
 			return fmt.Errorf("binding request body: %w", err)
 		}
 
-		if strings.ToLower(req.Password) != strings.ToLower(*password) {
-			logger.Info("incorrect password %q", req.Password)
+		if strings.EqualFold(req.Password, *password) {
+			logger.Infof("incorrect password %q", req.Password)
 			return c.JSON(http.StatusForbidden, map[string]any{
 				"result": "Incorrect password",
 			})
 		}
 
-		logger.Info("correct password %q", req.Password)
+		logger.Infof("correct password %q", req.Password)
 		return c.JSON(http.StatusOK, map[string]any{
 			"result": "Correct password",
 		})
