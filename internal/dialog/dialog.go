@@ -26,7 +26,7 @@ func StateFromProto(s *gameserverpb.DialogState) *State {
 
 type Dialog interface {
 	Greeting()
-	Feed(text string) error
+	Feed(text string)
 	State() *State
 	SetState(s *State)
 }

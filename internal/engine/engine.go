@@ -588,7 +588,7 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 
 		txt := fmt.Sprintf("HP: %d", e.Player.Health)
 
-		text.Draw(screen, txt, face, 72, camera.HEIGHT-72, redColor)
+		text.Draw(screen, txt, face, 72, 72, redColor)
 
 		for i, it := range e.Player.Inventory.Items {
 			op := &ebiten.DrawImageOptions{}
@@ -612,7 +612,7 @@ func (e *Engine) Update(inp *input.Input) error {
 		} else {
 			e.musicManager.GetPlayer(music.BossV1).Pause()
 			p := e.musicManager.GetPlayer(music.Background)
-			p.Play()
+			//p.Play()
 			if !p.IsPlaying() {
 				if err := p.Rewind(); err != nil {
 					panic(err)
@@ -635,7 +635,7 @@ func (e *Engine) Update(inp *input.Input) error {
 		}
 
 		pk := inp.JustPressedKeys()
-		if len(pk) > 0 {
+		if len(pk) > 0 && !e.activeNPC.Dialog.State().Finished {
 			c := pk[0]
 			switch c {
 			case ebiten.KeyBackspace:
@@ -645,9 +645,7 @@ func (e *Engine) Update(inp *input.Input) error {
 				}
 			case ebiten.KeyEnter:
 				// enter
-				if err := e.activeNPC.Dialog.Feed(strings.Join(e.dialogInputBuffer, "")); err != nil {
-					return fmt.Errorf("feeding dialog: %w", err)
-				}
+				e.activeNPC.Dialog.Feed(strings.Join(e.dialogInputBuffer, ""))
 				e.dialogInputBuffer = e.dialogInputBuffer[:0]
 			default:
 				e.dialogInputBuffer = append(e.dialogInputBuffer, input.Key(c).String())
