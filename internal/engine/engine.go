@@ -79,8 +79,6 @@ type Engine struct {
 
 	StartSnapshot *Snapshot `json:"-" msgpack:"-"`
 
-	IsWin bool `json:"-" msgpack:"isWin"`
-
 	fontsManager  *fonts.Manager
 	spriteManager *sprites.Manager
 	musicManager  *music.Manager
@@ -89,9 +87,11 @@ type Engine struct {
 	activeNPC     *npc.NPC
 	dialogControl dialogControl
 
-	Paused bool   `json:"-" msgpack:"paused"`
-	Tick   int    `json:"-" msgpack:"tick"`
-	Level  string `json:"-" msgpack:"level"`
+	Paused   bool   `json:"-" msgpack:"paused"`
+	Tick     int    `json:"-" msgpack:"tick"`
+	Level    string `json:"-" msgpack:"level"`
+	IsWin    bool   `json:"-" msgpack:"isWin"`
+	TeamName string `json:"-" msgpack:"-"`
 }
 
 func getProperties(o *tmx.Object) map[string]string {
@@ -385,6 +385,7 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 		snapshotsDir:  config.SnapshotsDir,
 		playerSpawn:   playerPos,
 		Level:         config.Level,
+		TeamName:      strings.Split(os.Getenv("AUTH_TOKEN"), ":")[0],
 	}, nil
 }
 
@@ -622,11 +623,12 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 
 	if !e.Player.IsDead() {
 		face := e.fontsManager.Get(fonts.Dialog)
-		redColor := color.RGBA{R: 0, G: 255, B: 0, A: 255}
+
+		teamtxt := fmt.Sprintf("Team %s", e.TeamName)
+		text.Draw(screen, teamtxt, face, 72, 72, color.RGBA{R: 0, G: 128, B: 128, A: 255})
 
 		txt := fmt.Sprintf("HP: %d", e.Player.Health)
-
-		text.Draw(screen, txt, face, 72, 72, redColor)
+		text.Draw(screen, txt, face, 72, 72+36, color.RGBA{R: 0, G: 255, B: 0, A: 255})
 
 		for i, it := range e.Player.Inventory.Items {
 			op := &ebiten.DrawImageOptions{}

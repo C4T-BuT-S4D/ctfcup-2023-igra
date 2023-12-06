@@ -34,6 +34,7 @@ type GameServer struct {
 	round        int64
 	mu           sync.Mutex
 	lastResponse *gameserverpb.InventoryResponse
+	isWin        bool
 }
 
 func (g *GameServer) Ping(context.Context, *gameserverpb.PingRequest) (*gameserverpb.PingResponse, error) {
@@ -103,6 +104,7 @@ func (g *GameServer) ProcessEvent(stream gameserverpb.GameServerService_ProcessE
 		}
 
 		g.updateLastResponse()
+		g.updateIsWin()
 	}
 }
 
@@ -115,6 +117,16 @@ func (g *GameServer) updateLastResponse() {
 		g.lastResponse = &gameserverpb.InventoryResponse{Inventory: eng.Player.Inventory.ToProto(), Round: g.round}
 	} else if g.lastResponse == nil {
 		g.lastResponse = &gameserverpb.InventoryResponse{Round: g.round}
+	}
+}
+
+func (g *GameServer) updateIsWin() {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	eng := g.game.getEngine()
+	if eng != nil {
+		g.game.IsWin = eng.IsWin
 	}
 }
 

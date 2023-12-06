@@ -3,7 +3,8 @@ package server
 import (
 	"errors"
 	"fmt"
-	"image/color"
+	"os"
+	"strings"
 	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -19,6 +20,7 @@ import (
 var ErrGameShutdown = errors.New("game is shut down")
 
 type Game struct {
+	IsWin  bool
 	engine *engine.Engine
 
 	lock sync.Mutex
@@ -95,12 +97,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	if g.engine != nil {
 		g.engine.Draw(screen)
 	} else {
-		// Draw a "client disconnected" text over all screen.
-		img := ebiten.NewImageFromImage(screen)
-		img.Fill(color.RGBA{0x80, 0x80, 0x80, 0xff})
-		text := "Client disconnected"
-		ebitenutil.DebugPrintAt(img, text, 0, 0)
-		screen.DrawImage(img, nil)
+		team := strings.Split(os.Getenv("AUTH_TOKEN"), ":")[0]
+		action := "disconnected"
+		if g.IsWin {
+			action = "won"
+		}
+
+		text := fmt.Sprintf("Team %s: %s", team, action)
+		ebitenutil.DebugPrintAt(screen, text, 32, 32)
 	}
 }
 

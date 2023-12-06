@@ -51,6 +51,7 @@ var interestingKeys = []ebiten.Key{
 	ebiten.KeyEscape,
 	ebiten.KeyEnter,
 	ebiten.KeyBackspace,
+	ebiten.KeyShiftLeft,
 	ebiten.KeyUp,
 	ebiten.KeyDown,
 }

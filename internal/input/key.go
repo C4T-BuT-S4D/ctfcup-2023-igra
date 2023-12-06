@@ -14,6 +14,8 @@ func (k Key) Rune() rune {
 		return ','
 	case ebiten.KeySlash:
 		return '?'
+	case ebiten.KeyShiftLeft:
+		return '\n'
 	default:
 		ebase, base, ek := ebiten.KeyA, 'A', ebiten.Key(k)
 		if ek >= ebiten.KeyDigit0 && ek <= ebiten.KeyDigit9 {
