@@ -1,8 +1,6 @@
 package item
 
 import (
-	"image/color"
-
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/geometry"
@@ -19,10 +17,7 @@ type Item struct {
 	Collected bool   `json:"collected"`
 }
 
-func New(origin *geometry.Point, width, height float64, name string, important bool) *Item {
-	img := ebiten.NewImage(int(width), int(height))
-	img.Fill(color.RGBA{R: 0xff, G: 0x00, B: 0x00, A: 0xff})
-
+func New(origin *geometry.Point, width, height float64, img *ebiten.Image, name string, important bool) *Item {
 	return &Item{
 		Object: &object.Object{
 			Origin: origin,

@@ -79,6 +79,8 @@ type Engine struct {
 
 	StartSnapshot *Snapshot `json:"-" msgpack:"-"`
 
+	IsWin bool `json:"-" msgpack:"isWin"`
+
 	fontsManager  *fonts.Manager
 	spriteManager *sprites.Manager
 	musicManager  *music.Manager
@@ -205,6 +207,13 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 			props := getProperties(&o)
 			switch o.Type {
 			case "item":
+				img := ebiten.NewImage(int(o.Width), int(o.Height))
+				img.Fill(color.RGBA{R: 0xff, G: 0x00, B: 0x00, A: 0xff})
+
+				if sprite := props["sprite"]; sprite != "" {
+					img = spriteManager.GetSprite(sprites.Type(sprite))
+				}
+
 				items = append(items, item.New(
 					&geometry.Point{
 						X: o.X,
@@ -212,6 +221,7 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 					},
 					o.Width,
 					o.Height,
+					img,
 					o.Name,
 					props["important"] == "true",
 				))
@@ -468,6 +478,15 @@ func (e *Engine) drawDiedScreen(screen *ebiten.Image) {
 	text.Draw(screen, "YOU DIED", face, camera.WIDTH/2-width.Floor()/2, camera.HEIGHT/2, redColor)
 }
 
+func (e *Engine) drawYouWinScreen(screen *ebiten.Image) {
+	face := e.fontsManager.Get(fonts.DSouls)
+	gColor := color.RGBA{R: 0, G: 255, B: 0, A: 255}
+
+	width := font.MeasureString(face, "YOU WIN")
+
+	text.Draw(screen, "YOU WIN", face, camera.WIDTH/2-width.Floor()/2, camera.HEIGHT/2, gColor)
+}
+
 func (e *Engine) drawNPCDialog(screen *ebiten.Image) {
 	colorWhite := color.RGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}
 	// Draw dialog border (outer rectangle).
@@ -519,6 +538,11 @@ func (e *Engine) drawNPCDialog(screen *ebiten.Image) {
 func (e *Engine) Draw(screen *ebiten.Image) {
 	if e.Player.IsDead() {
 		e.drawDiedScreen(screen)
+		return
+	}
+
+	if e.IsWin {
+		e.drawYouWinScreen(screen)
 		return
 	}
 
@@ -626,7 +650,7 @@ func (e *Engine) Update(inp *input.Input) error {
 		} else {
 			e.musicManager.GetPlayer(music.BossV1).Pause()
 			p := e.musicManager.GetPlayer(music.Background)
-			// p.Play()
+			p.Play()
 			if !p.IsPlaying() {
 				if err := p.Rewind(); err != nil {
 					panic(err)
@@ -690,6 +714,13 @@ func (e *Engine) Update(inp *input.Input) error {
 
 	if inp.IsKeyNewlyPressed(ebiten.KeyR) {
 		e.Reset()
+		return nil
+	}
+
+	if len(lo.Filter(e.Items, func(it *item.Item, _index int) bool {
+		return !it.Collected && it.Important
+	})) == 0 {
+		e.IsWin = true
 		return nil
 	}
 
