@@ -345,7 +345,6 @@
   <object id="12" name="someone12469 boots" type="item" x="5920" y="1856" width="32" height="32">
    <properties>
     <property name="important" type="bool" value="true"/>
-    <property name="item" value="someone12469 boots"/>
    </properties>
   </object>
   <object id="13" name="speedrun" type="portal" x="352" y="2080" width="32" height="32">
