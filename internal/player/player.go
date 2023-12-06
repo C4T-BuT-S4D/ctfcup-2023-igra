@@ -13,6 +13,8 @@ import (
 )
 
 const (
+	Width             = 32
+	Height            = 32
 	DefaultHealth     = 100
 	StandingAnimation = "standing"
 	RunningAnimation  = "running"
@@ -54,8 +56,8 @@ func New(origin *geometry.Point, spriteManager *sprites.Manager) (*Player, error
 	return &Player{
 		Object: &object.Object{
 			Origin: origin,
-			Width:  32,
-			Height: 32,
+			Width:  Width,
+			Height: Height,
 		},
 		Physical:   physics.NewPhysical(),
 		Inventory:  &Inventory{},

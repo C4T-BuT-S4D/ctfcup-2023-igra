@@ -72,10 +72,11 @@ type Engine struct {
 	InvWalls     []*wall.InvWall     `json:"-" msgpack:"invWalls"`
 	NPCs         []*npc.NPC          `json:"-" msgpack:"npcs"`
 	BossV1       *boss.V1            `json:"bossV1" msgpack:"bossV1"`
+	BossV2       *boss.V2            `json:"bossV2" msgpack:"bossV2"`
 	EnemyBullets []*damage.Bullet    `json:"-" msgpack:"enemyBullets"`
 
-	BossV1Pos     *geometry.Point `json:"-" msgpack:"bossV1Pos"`
-	EnteredBossV1 bool            `json:"-" msgpack:"enteredBossV1"`
+	EnteredBossV1 bool `json:"-" msgpack:"enteredBossV1"`
+	EnteredBossV2 bool `json:"-" msgpack:"enteredBossV2"`
 
 	StartSnapshot *Snapshot `json:"-" msgpack:"-"`
 
@@ -199,6 +200,7 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 	var invwalls []*wall.InvWall
 	var npcs []*npc.NPC
 	var bossV1 *boss.V1
+	var bossV2 *boss.V2
 	winPoints := make(map[string]*geometry.Point)
 	portalsMap := make(map[string]*portal.Portal)
 
@@ -295,6 +297,37 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 					X: o.X,
 					Y: o.Y,
 				}, img, bulletImg, speed, length, health, props["portal"], props["item"])
+			case "boss-v2":
+				speed, err := strconv.ParseFloat(props["speed"], 64)
+				if err != nil {
+					return nil, fmt.Errorf("getting boss speed: %w", err)
+				}
+				width, err := strconv.ParseFloat(props["width"], 64)
+				if err != nil {
+					return nil, fmt.Errorf("getting boss width: %w", err)
+				}
+				height, err := strconv.ParseFloat(props["height"], 64)
+				if err != nil {
+					return nil, fmt.Errorf("getting boss height: %w", err)
+				}
+				health, err := strconv.ParseInt(props["health"], 10, 64)
+				if err != nil {
+					return nil, fmt.Errorf("getting boss length: %w", err)
+				}
+				bossV2 = boss.NewV2(o.Name, &geometry.Point{
+					X: o.X,
+					Y: o.Y,
+				},
+					spriteManager.GetSprite(sprites.Gosha),
+					spriteManager.GetSprite(sprites.Bullet),
+					speed,
+					width,
+					height,
+					health,
+					props["portal"],
+					props["item"],
+				)
+
 			case "boss-win":
 				winPoints[o.Name] = &geometry.Point{X: o.X, Y: o.Y}
 			}
@@ -324,6 +357,31 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 		}
 
 		bossV1.Item = items[i]
+	}
+
+	if bossV2 != nil {
+		winPoint, ok := winPoints[bossV2.Name]
+		if !ok {
+			return nil, fmt.Errorf("win point %s not found for boss v2", bossV2.Name)
+		}
+
+		bossV2.WinPoint = winPoint
+
+		p, ok := portalsMap[bossV2.PortalName]
+		if !ok {
+			return nil, fmt.Errorf("win portal %s not found for boss v2", bossV2.PortalName)
+		}
+
+		bossV2.Portal = p
+
+		_, i, ok := lo.FindIndexOf(items, func(i *item.Item) bool {
+			return i.Name == bossV2.ItemName
+		})
+		if !ok {
+			return nil, fmt.Errorf("item %s not found for boss v1", bossV2.ItemName)
+		}
+
+		bossV2.Item = items[i]
 	}
 
 	for _, n := range npcs {
@@ -377,8 +435,8 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 		Spikes:        spikes,
 		InvWalls:      invwalls,
 		NPCs:          npcs,
-		BossV1Pos:     bossV1.GetOrigin(),
 		BossV1:        bossV1,
+		BossV2:        bossV2,
 		spriteManager: spriteManager,
 		fontsManager:  fontsManager,
 		musicManager:  musicManager,
@@ -433,13 +491,19 @@ func (e *Engine) Reset() {
 	e.activeNPC = nil
 	e.EnemyBullets = nil
 	if e.BossV1 != nil {
-		e.BossV1.MoveTo(e.BossV1Pos)
 		e.BossV1.Reset()
 	}
+	if e.BossV2 != nil {
+		e.BossV2.Reset()
+	}
 	e.EnteredBossV1 = false
+	e.EnteredBossV2 = false
 	e.Tick = 0
 	if e.musicManager != nil {
 		if err := e.musicManager.GetPlayer(music.BossV1).Rewind(); err != nil {
+			panic(err)
+		}
+		if err := e.musicManager.GetPlayer(music.BossV2).Rewind(); err != nil {
 			panic(err)
 		}
 	}
@@ -602,6 +666,11 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 			if !b.Dead {
 				screen.DrawImage(b.Image, op)
 			}
+		case object.BossV2:
+			b := c.(*boss.V2)
+			if !b.Dead {
+				screen.DrawImage(b.Image, op)
+			}
 		case object.EnemyBullet:
 			b := c.(*damage.Bullet)
 			if !b.Triggered {
@@ -611,9 +680,41 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 		}
 	}
 
+	if e.BossV2 != nil {
+		for _, cross := range e.BossV2.Crosses {
+			if cross.Obj.Rectangle().Intersects(e.Camera.Rectangle()) {
+				visible := cross.Obj.Rectangle().Sub(e.Camera.Rectangle())
+				base := geometry.Origin.Add(visible)
+				op := &ebiten.DrawImageOptions{}
+				op.GeoM.Translate(base.X, base.Y)
+				screen.DrawImage(sprites.NewManager().GetSprite(sprites.Cross), op)
+			}
+		}
+
+		for _, barbell := range e.BossV2.Barbells {
+			if barbell.Obj.Rectangle().Intersects(e.Camera.Rectangle()) {
+				visible := barbell.Obj.Rectangle().Sub(e.Camera.Rectangle())
+				base := geometry.Origin.Add(visible)
+				op := &ebiten.DrawImageOptions{}
+				op.GeoM.Translate(base.X, base.Y)
+				screen.DrawImage(sprites.NewManager().GetSprite(sprites.Barbell), op)
+			}
+		}
+	}
+
 	if e.EnteredBossV1 && !e.BossV1.Dead {
 		op := &ebiten.DrawImageOptions{}
 		width := float64(camera.WIDTH) * float64(e.BossV1.Health) / float64(e.BossV1.StartHealth)
+		op.GeoM.Scale(width, 32)
+		op.GeoM.Translate((float64(camera.WIDTH)-width)/2, 0)
+
+		bossHpImage := e.spriteManager.GetSprite(sprites.HP)
+		screen.DrawImage(bossHpImage, op)
+	}
+
+	if e.EnteredBossV2 && !e.BossV2.Dead {
+		op := &ebiten.DrawImageOptions{}
+		width := float64(camera.WIDTH) * float64(e.BossV2.Health) / float64(e.BossV2.StartHealth)
 		op.GeoM.Scale(width, 32)
 		op.GeoM.Translate((float64(camera.WIDTH)-width)/2, 0)
 
@@ -649,8 +750,12 @@ func (e *Engine) Update(inp *input.Input) error {
 		if e.EnteredBossV1 && !e.BossV1.Dead && !e.Paused && !e.Player.IsDead() {
 			e.musicManager.GetPlayer(music.Background).Pause()
 			e.musicManager.GetPlayer(music.BossV1).Play()
+		} else if e.EnteredBossV2 && !e.BossV2.Dead && !e.Paused && !e.Player.IsDead() {
+			e.musicManager.GetPlayer(music.Background).Pause()
+			e.musicManager.GetPlayer(music.BossV2).Play()
 		} else {
 			e.musicManager.GetPlayer(music.BossV1).Pause()
+			e.musicManager.GetPlayer(music.BossV2).Pause()
 			p := e.musicManager.GetPlayer(music.Background)
 			p.Play()
 			if !p.IsPlaying() {
@@ -710,6 +815,7 @@ func (e *Engine) Update(inp *input.Input) error {
 		e.Paused = true
 		if e.musicManager != nil {
 			e.musicManager.GetPlayer(music.BossV1).Pause()
+			e.musicManager.GetPlayer(music.BossV2).Pause()
 		}
 		e.Player.Speed = &geometry.Vector{}
 	}
@@ -739,6 +845,7 @@ func (e *Engine) Update(inp *input.Input) error {
 	e.CheckSpikes()
 	e.CheckEnemyBullets()
 	e.CheckBossV1()
+	e.CheckBossV2()
 	if err := e.CollectItems(); err != nil {
 		return fmt.Errorf("collecting items: %w", err)
 	}
@@ -875,6 +982,9 @@ func (e *Engine) CheckPortals() {
 		if p.Boss == "v1" {
 			e.EnteredBossV1 = true
 		}
+		if p.Boss == "v2" {
+			e.EnteredBossV2 = true
+		}
 		e.Player.MoveTo(p.TeleportTo)
 	}
 }
@@ -987,6 +1097,41 @@ func (e *Engine) CheckBossV1() {
 
 	x := e.BossV1.GetNextMove()
 	e.BossV1.MoveTo(&geometry.Point{X: x, Y: e.BossV1.Origin.Y})
+}
+
+func (e *Engine) CheckBossV2() {
+	if e.BossV2 == nil {
+		return
+	}
+
+	if !e.EnteredBossV2 {
+		return
+	}
+
+	if e.BossV2.Dead {
+		e.BossV2.Portal.MoveTo(e.BossV2.WinPoint)
+		e.BossV2.Item.MoveTo(e.BossV2.WinPoint.Add(&geometry.Vector{X: -e.BossV2.Portal.Width}))
+		return
+	}
+
+	e.BossV2.Tick(e.Player.Origin)
+
+	e.EnemyBullets = append(e.EnemyBullets, e.BossV2.CreateBullets(e.Player.Origin)...)
+
+	x, y := e.BossV2.GetNextMove()
+	e.BossV2.MoveTo(&geometry.Point{X: x, Y: y})
+
+	for _, cross := range e.BossV2.Crosses {
+		if cross.Obj.Rectangle().Intersects(e.Player.Rectangle()) {
+			e.Player.Health = 0
+		}
+	}
+
+	for _, barbell := range e.BossV2.Barbells {
+		if barbell.Obj.Rectangle().Intersects(e.Player.Rectangle()) {
+			e.Player.Health = 0
+		}
+	}
 }
 
 func (e *Engine) ActiveNPC() *npc.NPC {

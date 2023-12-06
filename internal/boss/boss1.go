@@ -18,6 +18,7 @@ const (
 
 type V1 struct {
 	*object.Object `json:"-"`
+	OriginPoint    *geometry.Point `json:"-"`
 	Name           string          `json:"-"`
 	MoveX          decimal.Decimal `json:"-"`
 	Image          *ebiten.Image   `json:"-" msgpack:"-"`
@@ -42,13 +43,6 @@ func (v *V1) Type() object.Type {
 	return object.BossV1
 }
 
-func (v *V1) GetOrigin() *geometry.Point {
-	if v == nil {
-		return nil
-	}
-	return v.Object.GetOrigin()
-}
-
 func NewV1(name string, origin *geometry.Point, img *ebiten.Image, bulletImage *ebiten.Image, speed float64, length float64, health int64, portalName string, itemName string) *V1 {
 	s := decimal.NewFromFloat(speed)
 	return &V1{
@@ -57,6 +51,7 @@ func NewV1(name string, origin *geometry.Point, img *ebiten.Image, bulletImage *
 			Width:  BossV1Width,
 			Height: BossV1Height,
 		},
+		OriginPoint: origin,
 		Name:        name,
 		MoveX:       s.Neg(),
 		bulletImage: bulletImage,
@@ -78,6 +73,8 @@ func (v *V1) Reset() {
 	v.MoveX = v.Speed.Neg()
 	v.Ticks = 0
 	v.Health = v.StartHealth
+	v.MoveTo(v.OriginPoint)
+	v.X = decimal.NewFromFloat(v.Origin.X)
 }
 
 func (v *V1) GetNextMove() float64 {
