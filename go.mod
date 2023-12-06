@@ -9,6 +9,7 @@ require (
 	github.com/labstack/echo/v4 v4.11.3
 	github.com/salviati/go-tmx v0.0.0-20180901011116-8dae25beffeb
 	github.com/samber/lo v1.38.1
+	github.com/shopspring/decimal v1.3.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.5
 	github.com/vmihailenco/msgpack/v5 v5.4.1

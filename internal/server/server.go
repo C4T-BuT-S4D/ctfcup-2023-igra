@@ -101,19 +101,25 @@ func (g *GameServer) ProcessEvent(stream gameserverpb.GameServerService_ProcessE
 		if err := g.game.processEvent(req.Event); err != nil {
 			return status.Errorf(codes.Internal, "processing event: %v", err)
 		}
+
+		g.updateLastResponse()
 	}
 }
 
-func (g *GameServer) GetInventory(context.Context, *gameserverpb.InventoryRequest) (*gameserverpb.InventoryResponse, error) {
+func (g *GameServer) updateLastResponse() {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
 	eng := g.game.getEngine()
 	if eng != nil {
-		g.lastResponse = &gameserverpb.InventoryResponse{Inventory: eng.Player.Inventory.ToProto(), Round: int64(g.round)}
+		g.lastResponse = &gameserverpb.InventoryResponse{Inventory: eng.Player.Inventory.ToProto(), Round: g.round}
 	} else if g.lastResponse == nil {
-		g.lastResponse = &gameserverpb.InventoryResponse{Round: int64(g.round)}
+		g.lastResponse = &gameserverpb.InventoryResponse{Round: g.round}
 	}
+}
+
+func (g *GameServer) GetInventory(context.Context, *gameserverpb.InventoryRequest) (*gameserverpb.InventoryResponse, error) {
+	g.updateLastResponse()
 
 	return g.lastResponse, nil
 }

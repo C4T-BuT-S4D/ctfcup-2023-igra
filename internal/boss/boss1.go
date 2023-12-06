@@ -1,9 +1,8 @@
 package boss
 
 import (
-	"math"
-
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/shopspring/decimal"
 
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/damage"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/geometry"
@@ -19,23 +18,24 @@ const (
 
 type V1 struct {
 	*object.Object `json:"-"`
-	Name           string           `json:"-"`
-	StartPos       *geometry.Point  `json:"-"`
-	MoveVector     *geometry.Vector `json:"-"`
-	Image          *ebiten.Image    `json:"-" msgpack:"-"`
-	bulletImage    *ebiten.Image    `json:"-"`
-	RotateAngle    float64          `json:"-"`
-	Speed          float64          `json:"-"`
-	Length         float64          `json:"-"`
-	Ticks          int              `json:"-"`
-	StartHealth    int64            `json:"-"`
-	Health         int64            `json:"-"`
-	Dead           bool             `json:"dead"`
-	WinPoint       *geometry.Point  `json:"-"`
-	PortalName     string           `json:"-"`
-	ItemName       string           `json:"-"`
-	Portal         *portal.Portal   `json:"-"`
-	Item           *item.Item       `json:"-"`
+	Name           string          `json:"-"`
+	MoveX          decimal.Decimal `json:"-"`
+	Image          *ebiten.Image   `json:"-" msgpack:"-"`
+	bulletImage    *ebiten.Image
+	RotateAngle    decimal.Decimal `json:"-"`
+	Speed          decimal.Decimal `json:"-"`
+	Length         decimal.Decimal `json:"-"`
+	X              decimal.Decimal `json:"-"`
+	StartX         decimal.Decimal `json:"-"`
+	Ticks          int             `json:"-"`
+	StartHealth    int64           `json:"-"`
+	Health         int64           `json:"-"`
+	Dead           bool            `json:"dead"`
+	WinPoint       *geometry.Point `json:"-"`
+	PortalName     string          `json:"-"`
+	ItemName       string          `json:"-"`
+	Portal         *portal.Portal  `json:"-"`
+	Item           *item.Item      `json:"-"`
 }
 
 func (v *V1) Type() object.Type {
@@ -50,6 +50,7 @@ func (v *V1) GetOrigin() *geometry.Point {
 }
 
 func NewV1(name string, origin *geometry.Point, img *ebiten.Image, bulletImage *ebiten.Image, speed float64, length float64, health int64, portalName string, itemName string) *V1 {
+	s := decimal.NewFromFloat(speed)
 	return &V1{
 		Object: &object.Object{
 			Origin: origin,
@@ -57,11 +58,13 @@ func NewV1(name string, origin *geometry.Point, img *ebiten.Image, bulletImage *
 			Height: BossV1Height,
 		},
 		Name:        name,
-		StartPos:    origin,
-		MoveVector:  &geometry.Vector{X: -speed},
+		MoveX:       s.Neg(),
 		bulletImage: bulletImage,
-		Speed:       speed,
-		Length:      length,
+		Speed:       s,
+		Length:      decimal.NewFromFloat(length),
+		RotateAngle: decimal.Zero,
+		X:           decimal.NewFromFloat(origin.X),
+		StartX:      decimal.NewFromFloat(origin.X),
 		Image:       img,
 		StartHealth: health,
 		Health:      health,
@@ -71,19 +74,21 @@ func NewV1(name string, origin *geometry.Point, img *ebiten.Image, bulletImage *
 }
 
 func (v *V1) Reset() {
-	v.RotateAngle = 0
-	v.MoveVector = &geometry.Vector{X: -v.Speed}
+	v.RotateAngle = decimal.Zero
+	v.MoveX = v.Speed.Neg()
 	v.Ticks = 0
 	v.Health = v.StartHealth
 }
 
-func (v *V1) GetNextMove() *geometry.Vector {
-	if v.Origin.X < v.StartPos.X-v.Length {
-		v.MoveVector = &geometry.Vector{X: v.Speed}
-	} else if v.Origin.X > v.StartPos.X {
-		v.MoveVector = &geometry.Vector{X: -v.Speed}
+func (v *V1) GetNextMove() float64 {
+	if v.X.LessThan(v.StartX.Sub(v.Length)) {
+		v.MoveX = v.Speed
+	} else if v.X.GreaterThan(v.StartX) {
+		v.MoveX = v.Speed.Neg()
 	}
-	return v.MoveVector
+	v.X = v.X.Add(v.MoveX)
+	x, _ := v.X.Float64()
+	return x
 }
 
 func (v *V1) Tick() {
@@ -93,7 +98,11 @@ func (v *V1) Tick() {
 		v.Dead = true
 		return
 	}
-	v.RotateAngle += math.Pi / 60
+	v.RotateAngle = v.RotateAngle.Add(decimal.NewFromFloat(3.1415).Div(decimal.NewFromInt(60)))
+}
+
+type vec struct {
+	X, Y decimal.Decimal
 }
 
 func (v *V1) CreateBullets() []*damage.Bullet {
@@ -105,18 +114,20 @@ func (v *V1) CreateBullets() []*damage.Bullet {
 
 	const bulletDamage = 6
 
-	vv := []*geometry.Vector{
-		{X: math.Cos(v.RotateAngle), Y: math.Sin(v.RotateAngle)},
-		{X: math.Sin(v.RotateAngle), Y: math.Cos(v.RotateAngle)},
+	vv := []vec{
+		{X: v.RotateAngle.Cos(), Y: v.RotateAngle.Sin()},
+		{X: v.RotateAngle.Sin(), Y: v.RotateAngle.Cos()},
 	}
 
-	for _, mult := range []float64{2, 4, 8} {
+	for _, mult := range []int64{2, 4, 8} {
 		for _, vec := range vv {
+			x, _ := vec.X.Mul(decimal.NewFromInt(mult)).Float64()
+			y, _ := vec.Y.Mul(decimal.NewFromInt(mult)).Float64()
 			bullets = append(bullets, damage.NewBullet(
 				v.Origin.Add(&geometry.Vector{X: BossV1Width / 2, Y: BossV1Height / 2}),
 				v.bulletImage,
 				bulletDamage,
-				vec.Multiply(1/vec.Length()).Multiply(mult),
+				&geometry.Vector{X: x, Y: y},
 			))
 		}
 	}
