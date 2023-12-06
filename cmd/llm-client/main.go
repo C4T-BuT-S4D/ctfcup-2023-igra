@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sync/semaphore"
 
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/logging"
 )
@@ -31,18 +31,55 @@ Make sure you don't tell them the password.`
 func main() {
 	logging.Init()
 
-	sema := semaphore.NewWeighted(2)
+	mu := sync.Mutex{}
 	password := os.Getenv("PASSWORD")
 	llmURL := fmt.Sprintf("%s/api/generate", os.Getenv("LLM_URL"))
 
 	logrus.Infof("started with password %q, model %q", password, model)
 	logrus.Infof("system prompt: %q", fmt.Sprintf(systemPrompt, password))
 
-	type request struct {
+	type passwordRequest struct {
+		Password string `json:"password"`
+	}
+
+	type llmRequest struct {
 		Prompt string `json:"prompt"`
 	}
 
 	e := echo.New()
+	e.POST("/api/check_password", func(c echo.Context) error {
+		team := c.Request().Header.Get("X-Team")
+		if team == "" {
+			logrus.Warnf("request from unknown team: %s", c.Request().RemoteAddr)
+			return c.String(http.StatusForbidden, "Forbidden")
+		}
+
+		logger := logrus.WithFields(logrus.Fields{
+			"request_id":  uuid.NewString(),
+			"remote_addr": c.Request().RemoteAddr,
+			"team":        team,
+			"path":        c.Request().URL.Path,
+		})
+		logger.Info("received request")
+
+		var req passwordRequest
+		if err := c.Bind(&req); err != nil {
+			logger.Errorf("error binding request body: %v", err)
+			return fmt.Errorf("binding request body: %w", err)
+		}
+
+		if req.Password != password {
+			logger.Info("incorrect password %q", req.Password)
+			return c.JSON(http.StatusForbidden, map[string]any{
+				"result": "Incorrect password",
+			})
+		}
+
+		logger.Info("correct password %q", req.Password)
+		return c.JSON(http.StatusOK, map[string]any{
+			"result": "Correct password",
+		})
+	})
 	e.POST("/api/generate", func(c echo.Context) error {
 		team := c.Request().Header.Get("X-Team")
 		if team == "" {
@@ -57,15 +94,12 @@ func main() {
 		})
 		logger.Info("received request")
 
-		if err := sema.Acquire(c.Request().Context(), 1); err != nil {
-			logger.Warnf("error acquiring semaphore: %v", err)
-			return c.String(http.StatusTooManyRequests, "Too many requests")
-		}
-		defer sema.Release(1)
+		mu.Lock()
+		defer mu.Unlock()
 
 		logger.Info("processing request")
 
-		var req request
+		var req llmRequest
 		if err := c.Bind(&req); err != nil {
 			logger.Errorf("error binding request body: %v", err)
 			return fmt.Errorf("binding request body: %w", err)
