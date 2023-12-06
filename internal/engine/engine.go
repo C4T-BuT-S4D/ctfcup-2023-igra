@@ -587,7 +587,7 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 
 		for i, it := range e.Player.Inventory.Items {
 			op := &ebiten.DrawImageOptions{}
-			op.GeoM.Translate(e.Camera.Width-float64(i+1)*72, e.Camera.Height-72)
+			op.GeoM.Translate(e.Camera.Width-float64(i+1)*72, 72)
 			screen.DrawImage(it.Image, op)
 		}
 	}
