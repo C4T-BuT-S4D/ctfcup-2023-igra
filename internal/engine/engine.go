@@ -747,13 +747,14 @@ func (e *Engine) Update(inp *input.Input) error {
 	e.Tick++
 
 	if e.musicManager != nil {
-		if e.EnteredBossV1 && !e.BossV1.Dead && !e.Paused && !e.Player.IsDead() {
+		switch {
+		case e.EnteredBossV1 && !e.BossV1.Dead && !e.Paused && !e.Player.IsDead():
 			e.musicManager.GetPlayer(music.Background).Pause()
 			e.musicManager.GetPlayer(music.BossV1).Play()
-		} else if e.EnteredBossV2 && !e.BossV2.Dead && !e.Paused && !e.Player.IsDead() {
+		case e.EnteredBossV2 && !e.BossV2.Dead && !e.Paused && !e.Player.IsDead():
 			e.musicManager.GetPlayer(music.Background).Pause()
 			e.musicManager.GetPlayer(music.BossV2).Play()
-		} else {
+		default:
 			e.musicManager.GetPlayer(music.BossV1).Pause()
 			e.musicManager.GetPlayer(music.BossV2).Pause()
 			p := e.musicManager.GetPlayer(music.Background)
@@ -806,7 +807,6 @@ func (e *Engine) Update(inp *input.Input) error {
 	}
 
 	if e.Paused {
-
 		if inp.IsKeyNewlyPressed(ebiten.KeyP) {
 			e.Paused = false
 		} else {

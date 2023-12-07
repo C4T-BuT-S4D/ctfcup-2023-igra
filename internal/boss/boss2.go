@@ -1,13 +1,14 @@
 package boss
 
 import (
+	"github.com/hajimehoshi/ebiten/v2"
+
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/damage"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/geometry"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/item"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/object"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/player"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/portal"
-	"github.com/hajimehoshi/ebiten/v2"
 )
 
 const (
@@ -218,7 +219,7 @@ func (v *V2) CreateBullets(playerPos *geometry.Point) []*damage.Bullet {
 		return nil
 	}
 
-	var bullets []*damage.Bullet
+	var bullets = make([]*damage.Bullet, 0, 6)
 
 	for _, c := range []float64{30, 55, 60, 80, 100, 110} {
 		bullets = append(bullets, damage.NewBullet(
@@ -237,31 +238,27 @@ func (v *V2) GetNextMove() (float64, float64) {
 	case 0:
 		if v.Origin.X > v.StartPoint.X-v.Width {
 			return v.Origin.X - v.Speed, v.Origin.Y
-		} else {
-			v.State = 1
-			return v.Origin.X, v.Origin.Y
 		}
+		v.State = 1
+		return v.Origin.X, v.Origin.Y
 	case 1:
 		if v.Origin.Y < v.StartPoint.Y+v.Height {
 			return v.Origin.X, v.Origin.Y + v.Speed
-		} else {
-			v.State = 2
-			return v.Origin.X, v.Origin.Y
 		}
+		v.State = 2
+		return v.Origin.X, v.Origin.Y
 	case 2:
 		if v.Origin.X < v.StartPoint.X {
 			return v.Origin.X + v.Speed, v.Origin.Y
-		} else {
-			v.State = 3
-			return v.Origin.X, v.Origin.Y
 		}
+		v.State = 3
+		return v.Origin.X, v.Origin.Y
 	case 3:
 		if v.Origin.Y > v.StartPoint.Y {
 			return v.Origin.X, v.Origin.Y - v.Speed
-		} else {
-			v.State = 0
-			return v.Origin.X, v.Origin.Y
 		}
+		v.State = 0
+		return v.Origin.X, v.Origin.Y
 	default:
 	}
 
