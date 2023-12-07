@@ -262,9 +262,9 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 			case "npc":
 				img := spriteManager.GetSprite(sprites.Type(props["sprite"]))
 				dimg := spriteManager.GetSprite(sprites.Type(props["dialog-sprite"]))
-				slond, err := dialogProvider.Get(o.Name)
+				npcd, err := dialogProvider.Get(o.Name)
 				if err != nil {
-					return nil, fmt.Errorf("getting slon dialog: %w", err)
+					return nil, fmt.Errorf("getting '%s' dialog: %w", o.Name, err)
 				}
 				npcs = append(npcs, npc.New(
 					&geometry.Point{
@@ -275,7 +275,7 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 					dimg,
 					o.Width,
 					o.Height,
-					slond,
+					npcd,
 					props["item"],
 				))
 			case "boss-v1":
@@ -806,6 +806,7 @@ func (e *Engine) Update(inp *input.Input) error {
 	}
 
 	if e.Paused {
+
 		if inp.IsKeyNewlyPressed(ebiten.KeyP) {
 			e.Paused = false
 		} else {

@@ -24,7 +24,7 @@ func (sp *StandardProvider) Get(id string) (Dialog, error) {
 			Token: os.Getenv("AUTH_TOKEN"),
 			URL:   "http://localhost:8081",
 		}, nil
-	case "llm-boss-final":
+	case "ceo-boss":
 		return &LLM{
 			Intro: "I'm the REAL boss of Arbalest of Siberia. It's impossible to defeat me!",
 			Token: os.Getenv("AUTH_TOKEN"),
