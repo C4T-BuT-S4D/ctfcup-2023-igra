@@ -13,7 +13,6 @@ const (
 	InvWall
 	NPC
 	BossV1
-	BossV2
 	EnemyBullet
 )
 
