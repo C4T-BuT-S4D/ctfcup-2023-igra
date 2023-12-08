@@ -7,9 +7,21 @@ import (
 
 type Provider interface {
 	Get(id string) (Dialog, error)
+	DisplayInput() bool
 }
 
 type StandardProvider struct {
+	ShowInput bool
+}
+
+func NewStandardProvider(showInput bool) *StandardProvider {
+	return &StandardProvider{
+		ShowInput: showInput,
+	}
+}
+
+func (sp *StandardProvider) DisplayInput() bool {
+	return sp.ShowInput
 }
 
 func (sp *StandardProvider) Get(id string) (Dialog, error) {
@@ -22,15 +34,17 @@ func (sp *StandardProvider) Get(id string) (Dialog, error) {
 		return NewWiseTree(), nil
 	case "llm-boss-1":
 		return &LLM{
-			Intro: "I'm the boss of Arbalest of Siberia. Don't try to defeat me!",
-			Token: os.Getenv("AUTH_TOKEN"),
-			URL:   "http://localhost:8081",
+			Intro:     "I'm the boss of Arbalest of Siberia. Don't try to defeat me!",
+			Token:     os.Getenv("AUTH_TOKEN"),
+			URL:       "http://localhost:8081",
+			MaskInput: !sp.DisplayInput(),
 		}, nil
 	case "ceo-boss":
 		return &LLM{
-			Intro: "I'm the REAL boss of Arbalest of Siberia. It's impossible to defeat me!",
-			Token: os.Getenv("AUTH_TOKEN"),
-			URL:   "http://localhost:8082",
+			Intro:     "I'm the REAL boss of Arbalest of Siberia. It's impossible to defeat me!",
+			Token:     os.Getenv("AUTH_TOKEN"),
+			URL:       "http://localhost:8082",
+			MaskInput: !sp.DisplayInput(),
 		}, nil
 
 	case "capytoshka":
@@ -45,4 +59,8 @@ type ClientProvider struct {
 
 func (cp *ClientProvider) Get(_ string) (Dialog, error) {
 	return NewClientDialog(), nil
+}
+
+func (cp *ClientProvider) DisplayInput() bool {
+	return true
 }

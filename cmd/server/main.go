@@ -41,7 +41,7 @@ func main() {
 
 	fntmng := fonts.NewManager()
 	smng := sprites.NewManager()
-	dialogProvider := &dialog.StandardProvider{}
+	dialogProvider := dialog.NewStandardProvider(false)
 
 	game := server.NewGame(*snapshotsDir, fntmng)
 

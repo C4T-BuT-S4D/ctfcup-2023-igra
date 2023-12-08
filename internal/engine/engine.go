@@ -60,6 +60,7 @@ type Config struct {
 type dialogControl struct {
 	inputBuffer []rune
 	scroll      int
+	maskInput   bool
 }
 
 type Engine struct {
@@ -444,6 +445,9 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 		playerSpawn:   playerPos,
 		Level:         config.Level,
 		TeamName:      strings.Split(os.Getenv("AUTH_TOKEN"), ":")[0],
+		dialogControl: dialogControl{
+			maskInput: !dialogProvider.DisplayInput(),
+		},
 	}, nil
 }
 
@@ -595,7 +599,11 @@ func (e *Engine) drawNPCDialog(screen *ebiten.Image) {
 	if len(e.dialogControl.inputBuffer) > 0 {
 		dtbx, dtby := dtx, dty+float64((len(visibleLines)-1)*face.Metrics().Height.Floor())+1.0*float64(face.Metrics().Height.Floor())
 		c := color.RGBA{R: 0x00, G: 0xff, B: 0xff, A: 0xff}
-		x := input.AutoWrap(string(e.dialogControl.inputBuffer), face, ibw-camera.WIDTH/32)
+		ibuf := string(e.dialogControl.inputBuffer)
+		if e.dialogControl.maskInput {
+			ibuf = strings.Repeat("*", len(ibuf))
+		}
+		x := input.AutoWrap(ibuf, face, ibw-camera.WIDTH/32)
 		text.Draw(screen, strings.Join(x, "\n"), face, int(dtbx), int(dtby), c)
 	}
 }
