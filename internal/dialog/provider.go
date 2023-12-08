@@ -39,13 +39,6 @@ func (sp *StandardProvider) Get(id string) (Dialog, error) {
 			URL:       "http://localhost:8081",
 			MaskInput: !sp.DisplayInput(),
 		}, nil
-	case "ceo-boss":
-		return &LLM{
-			Intro:     "I'm the REAL boss of Arbalest of Siberia. It's impossible to defeat me!",
-			Token:     os.Getenv("AUTH_TOKEN"),
-			URL:       "http://localhost:8082",
-			MaskInput: !sp.DisplayInput(),
-		}, nil
 
 	case "capytoshka":
 		return NewCapy(os.Getenv("CAPY_TOKEN")), nil
