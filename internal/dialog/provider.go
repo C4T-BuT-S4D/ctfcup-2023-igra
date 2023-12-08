@@ -1,8 +1,6 @@
 package dialog
 
-import (
-	"fmt"
-)
+import "fmt"
 
 type Provider interface {
 	Get(id string) (Dialog, error)
