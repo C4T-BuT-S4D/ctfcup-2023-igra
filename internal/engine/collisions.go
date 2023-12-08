@@ -36,23 +36,7 @@ func (e *Engine) Collisions(r *geometry.Rectangle) []object.GenericObject {
 		}
 	}
 
-	for _, t := range e.InvWalls {
-		if t.Rectangle().Intersects(r) {
-			result = append(result, t)
-		}
-	}
-
 	for _, t := range e.NPCs {
-		if t.Rectangle().Intersects(r) {
-			result = append(result, t)
-		}
-	}
-
-	if e.BossV1 != nil && e.BossV1.Rectangle().Intersects(r) {
-		result = append(result, e.BossV1)
-	}
-
-	for _, t := range e.EnemyBullets {
 		if t.Rectangle().Intersects(r) {
 			result = append(result, t)
 		}

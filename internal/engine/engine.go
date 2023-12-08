@@ -11,7 +11,6 @@ import (
 	"image/color"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -24,7 +23,6 @@ import (
 	"golang.org/x/exp/slices"
 	"golang.org/x/image/font"
 
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/boss"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/camera"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/damage"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/dialog"
@@ -41,7 +39,6 @@ import (
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/resources"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/sprites"
 	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/tiles"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/wall"
 	gameserverpb "github.com/c4t-but-s4d/ctfcup-2023-igra/proto/go/gameserver"
 
 	// Register png codec.
@@ -63,18 +60,13 @@ type dialogControl struct {
 }
 
 type Engine struct {
-	Tiles        []*tiles.StaticTile `json:"-" msgpack:"-"`
-	Camera       *camera.Camera      `json:"-" msgpack:"camera"`
-	Player       *player.Player      `json:"-" msgpack:"player"`
-	Items        []*item.Item        `json:"items" msgpack:"items"`
-	Portals      []*portal.Portal    `json:"-" msgpack:"portals"`
-	Spikes       []*damage.Spike     `json:"-" msgpack:"spikes"`
-	InvWalls     []*wall.InvWall     `json:"-" msgpack:"invWalls"`
-	NPCs         []*npc.NPC          `json:"-" msgpack:"npcs"`
-	BossV1       *boss.V1            `json:"bossV1" msgpack:"bossV1"`
-	EnemyBullets []*damage.Bullet    `json:"-" msgpack:"enemyBullets"`
-
-	EnteredBossV1 bool `json:"-" msgpack:"enteredBossV1"`
+	Tiles   []*tiles.StaticTile `json:"-" msgpack:"-"`
+	Camera  *camera.Camera      `json:"-" msgpack:"camera"`
+	Player  *player.Player      `json:"-" msgpack:"player"`
+	Items   []*item.Item        `json:"items" msgpack:"items"`
+	Portals []*portal.Portal    `json:"-" msgpack:"portals"`
+	Spikes  []*damage.Spike     `json:"-" msgpack:"spikes"`
+	NPCs    []*npc.NPC          `json:"-" msgpack:"npcs"`
 
 	StartSnapshot *Snapshot `json:"-" msgpack:"-"`
 
@@ -195,10 +187,7 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 
 	var items []*item.Item
 	var spikes []*damage.Spike
-	var invwalls []*wall.InvWall
 	var npcs []*npc.NPC
-	var bossV1 *boss.V1
-	winPoints := make(map[string]*geometry.Point)
 	portalsMap := make(map[string]*portal.Portal)
 
 	for _, og := range testMap.ObjectGroups {
@@ -249,13 +238,6 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 					o.Width,
 					o.Height,
 				))
-			case "invwall":
-				invwalls = append(invwalls, wall.NewInvWall(&geometry.Point{
-					X: o.X,
-					Y: o.Y,
-				},
-					o.Width,
-					o.Height))
 			case "npc":
 				img := spriteManager.GetSprite(sprites.Type(props["sprite"]))
 				dimg := spriteManager.GetSprite(sprites.Type(props["dialog-sprite"]))
@@ -275,55 +257,8 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 					npcd,
 					props["item"],
 				))
-			case "boss-v1":
-				img := spriteManager.GetSprite(sprites.BossV1)
-				bulletImg := spriteManager.GetSprite(sprites.Bullet)
-				speed, err := strconv.ParseFloat(props["speed"], 64)
-				if err != nil {
-					return nil, fmt.Errorf("getting boss speed: %w", err)
-				}
-				length, err := strconv.ParseFloat(props["length"], 64)
-				if err != nil {
-					return nil, fmt.Errorf("getting boss length: %w", err)
-				}
-				health, err := strconv.ParseInt(props["health"], 10, 64)
-				if err != nil {
-					return nil, fmt.Errorf("getting boss length: %w", err)
-				}
-				bossV1 = boss.NewV1(o.Name, &geometry.Point{
-					X: o.X,
-					Y: o.Y,
-				}, img, bulletImg, speed, length, health, props["portal"], props["item"])
-
-			case "boss-win":
-				winPoints[o.Name] = &geometry.Point{X: o.X, Y: o.Y}
 			}
 		}
-	}
-
-	if bossV1 != nil {
-		winPoint, ok := winPoints[bossV1.Name]
-		if !ok {
-			return nil, fmt.Errorf("win point %s not found for boss v1", bossV1.Name)
-		}
-
-		bossV1.WinPoint = winPoint
-
-		p, ok := portalsMap[bossV1.PortalName]
-		if !ok {
-			return nil, fmt.Errorf("win portal %s not found for boss v1", bossV1.PortalName)
-		}
-
-		bossV1.Portal = p
-
-		_, i, ok := lo.FindIndexOf(items, func(i *item.Item) bool {
-			return i.Name == bossV1.ItemName
-		})
-		if !ok {
-			return nil, fmt.Errorf("item %s not found for boss v1", bossV1.ItemName)
-		}
-
-		bossV1.Item = items[i]
 	}
 
 	for _, n := range npcs {
@@ -375,9 +310,7 @@ func New(config Config, spriteManager *sprites.Manager, fontsManager *fonts.Mana
 		Items:         items,
 		Portals:       portals,
 		Spikes:        spikes,
-		InvWalls:      invwalls,
 		NPCs:          npcs,
-		BossV1:        bossV1,
 		spriteManager: spriteManager,
 		fontsManager:  fontsManager,
 		musicManager:  musicManager,
@@ -430,17 +363,7 @@ func (e *Engine) Reset() {
 	e.Player.MoveTo(e.playerSpawn)
 	e.Player.Health = player.DefaultHealth
 	e.activeNPC = nil
-	e.EnemyBullets = nil
-	if e.BossV1 != nil {
-		e.BossV1.Reset()
-	}
-	e.EnteredBossV1 = false
 	e.Tick = 0
-	if e.musicManager != nil {
-		if err := e.musicManager.GetPlayer(music.BossV1).Rewind(); err != nil {
-			panic(err)
-		}
-	}
 }
 
 func (e *Engine) MakeSnapshot() (*Snapshot, error) {
@@ -556,15 +479,6 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 				op.GeoM.Scale(-1, 1)
 				op.GeoM.Translate(e.Player.Width, 0)
 			}
-		case object.BossV1:
-			b := c.(*boss.V1)
-			op.GeoM.Translate(-boss.BossV1Width/2, -boss.BossV1Height/2)
-			r, _ := b.RotateAngle.Float64()
-			op.GeoM.Rotate(r)
-			op.GeoM.Translate(boss.BossV1Width/2, boss.BossV1Height/2)
-		case object.EnemyBullet:
-			op.GeoM.Scale(4, 4)
-			op.GeoM.Translate(-2, 0)
 		default:
 			// not a player or boss.
 		}
@@ -595,28 +509,8 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 		case object.NPC:
 			n := c.(*npc.NPC)
 			screen.DrawImage(n.Image, op)
-		case object.BossV1:
-			b := c.(*boss.V1)
-			if !b.Dead {
-				screen.DrawImage(b.Image, op)
-			}
-		case object.EnemyBullet:
-			b := c.(*damage.Bullet)
-			if !b.Triggered {
-				screen.DrawImage(b.Image, op)
-			}
 		default:
 		}
-	}
-
-	if e.EnteredBossV1 && !e.BossV1.Dead {
-		op := &ebiten.DrawImageOptions{}
-		width := float64(camera.WIDTH) * float64(e.BossV1.Health) / float64(e.BossV1.StartHealth)
-		op.GeoM.Scale(width, 32)
-		op.GeoM.Translate((float64(camera.WIDTH)-width)/2, 0)
-
-		bossHpImage := e.spriteManager.GetSprite(sprites.HP)
-		screen.DrawImage(bossHpImage, op)
 	}
 
 	if !e.Player.IsDead() {
@@ -644,18 +538,11 @@ func (e *Engine) Update(inp *input.Input) error {
 	e.Tick++
 
 	if e.musicManager != nil {
-		switch {
-		case e.EnteredBossV1 && !e.BossV1.Dead && !e.Paused && !e.Player.IsDead():
-			e.musicManager.GetPlayer(music.Background).Pause()
-			e.musicManager.GetPlayer(music.BossV1).Play()
-		default:
-			e.musicManager.GetPlayer(music.BossV1).Pause()
-			p := e.musicManager.GetPlayer(music.Background)
-			p.Play()
-			if !p.IsPlaying() {
-				if err := p.Rewind(); err != nil {
-					panic(err)
-				}
+		p := e.musicManager.GetPlayer(music.Background)
+		p.Play()
+		if !p.IsPlaying() {
+			if err := p.Rewind(); err != nil {
+				panic(err)
 			}
 		}
 	}
@@ -707,9 +594,6 @@ func (e *Engine) Update(inp *input.Input) error {
 		}
 	} else if inp.IsKeyNewlyPressed(ebiten.KeyP) {
 		e.Paused = true
-		if e.musicManager != nil {
-			e.musicManager.GetPlayer(music.BossV1).Pause()
-		}
 		e.Player.Speed = &geometry.Vector{}
 	}
 
@@ -736,8 +620,6 @@ func (e *Engine) Update(inp *input.Input) error {
 	e.AlignPlayerY()
 	e.CheckPortals()
 	e.CheckSpikes()
-	e.CheckEnemyBullets()
-	e.CheckBossV1()
 	if err := e.CollectItems(); err != nil {
 		return fmt.Errorf("collecting items: %w", err)
 	}
@@ -871,9 +753,6 @@ func (e *Engine) CheckPortals() {
 			continue
 		}
 
-		if p.Boss == "v1" {
-			e.EnteredBossV1 = true
-		}
 		e.Player.MoveTo(p.TeleportTo)
 	}
 }
@@ -886,41 +765,6 @@ func (e *Engine) CheckSpikes() {
 
 		s := c.(*damage.Spike)
 		e.Player.Health -= s.Damage
-	}
-}
-
-func (e *Engine) CheckEnemyBullets() {
-	var bullets []*damage.Bullet
-
-	for _, b := range e.EnemyBullets {
-		b.Move(b.Direction)
-		ok := true
-		for _, c := range e.Collisions(b.Rectangle()) {
-			if c.Type() == object.StaticTileType {
-				ok = false
-				break
-			}
-		}
-		if ok {
-			bullets = append(bullets, b)
-		}
-	}
-
-	e.EnemyBullets = bullets
-
-	for _, c := range e.Collisions(e.Player.Rectangle()) {
-		if c.Type() != object.EnemyBullet {
-			continue
-		}
-
-		b := c.(*damage.Bullet)
-
-		if b.Triggered {
-			continue
-		}
-
-		e.Player.Health -= b.Damage
-		b.Triggered = true
 	}
 }
 
@@ -964,28 +808,6 @@ func (e *Engine) ValidateChecksum(checksum string) error {
 	}
 
 	return nil
-}
-
-func (e *Engine) CheckBossV1() {
-	if e.BossV1 == nil {
-		return
-	}
-
-	if !e.EnteredBossV1 {
-		return
-	}
-
-	if e.BossV1.Dead {
-		e.BossV1.Portal.MoveTo(e.BossV1.WinPoint)
-		e.BossV1.Item.MoveTo(e.BossV1.WinPoint.Add(&geometry.Vector{X: -e.BossV1.Portal.Width}))
-		return
-	}
-
-	e.BossV1.Tick()
-	e.EnemyBullets = append(e.EnemyBullets, e.BossV1.CreateBullets()...)
-
-	x := e.BossV1.GetNextMove()
-	e.BossV1.MoveTo(&geometry.Point{X: x, Y: e.BossV1.Origin.Y})
 }
 
 func (e *Engine) ActiveNPC() *npc.NPC {
