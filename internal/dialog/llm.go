@@ -6,16 +6,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
 const timeout time.Duration = 30 * time.Second
 
 type LLM struct {
-	Intro string
-	URL   string
-	Token string
-	state State
+	Intro     string
+	URL       string
+	Token     string
+	MaskInput bool
+	state     State
 }
 
 func (l *LLM) Greeting() {
@@ -63,6 +65,9 @@ func (l *LLM) checkIsFlag(text string) bool {
 
 func (l *LLM) Feed(text string) {
 	l.state.Text = fmt.Sprintf("> %s\n", text)
+	if l.MaskInput {
+		l.state.Text = fmt.Sprintf("> %s\n", strings.Repeat("*", len(text)))
+	}
 
 	if l.checkIsFlag(text) {
 		l.state.Text += "You defeated me!!!\n"

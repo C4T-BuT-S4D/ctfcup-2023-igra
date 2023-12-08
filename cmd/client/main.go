@@ -86,7 +86,7 @@ func NewGame(ctx context.Context, client gameserverpb.GameServerServiceClient, l
 			}
 		}()
 	} else {
-		e, err := engine.New(engineConfig, smng, fntmng, mscmng, &dialog.StandardProvider{})
+		e, err := engine.New(engineConfig, smng, fntmng, mscmng, dialog.NewStandardProvider(true))
 		if err != nil {
 			return nil, fmt.Errorf("initializing engine: %w", err)
 		}
