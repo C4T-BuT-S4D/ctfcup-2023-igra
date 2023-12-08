@@ -42,6 +42,7 @@ var options = map[string]any{
 func main() {
 	password := pflag.StringP("password", "p", "secret", "llm secret password")
 	hosts := pflag.StringSliceP("hosts", "h", []string{"http://localhost:8080"}, "llm hosts")
+	listen := pflag.StringP("listen", "l", "127.0.0.1:8082", "listen address")
 	pflag.Parse()
 
 	logging.Init()
@@ -88,7 +89,7 @@ func main() {
 			return fmt.Errorf("binding request body: %w", err)
 		}
 
-		if strings.EqualFold(req.Password, *password) {
+		if !strings.EqualFold(req.Password, *password) {
 			logger.Infof("incorrect password %q", req.Password)
 			return c.JSON(http.StatusForbidden, map[string]any{
 				"result": "Incorrect password",
@@ -186,7 +187,7 @@ func main() {
 	})
 
 	e.HideBanner = true
-	if err := e.Start(":8081"); err != nil {
+	if err := e.Start(*listen); err != nil {
 		logrus.Fatalf("error running server: %v", err)
 	}
 }
