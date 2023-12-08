@@ -687,7 +687,7 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 				base := geometry.Origin.Add(visible)
 				op := &ebiten.DrawImageOptions{}
 				op.GeoM.Translate(base.X, base.Y)
-				screen.DrawImage(sprites.NewManager().GetSprite(sprites.Cross), op)
+				screen.DrawImage(e.spriteManager.GetSprite(sprites.Cross), op)
 			}
 		}
 
@@ -697,7 +697,7 @@ func (e *Engine) Draw(screen *ebiten.Image) {
 				base := geometry.Origin.Add(visible)
 				op := &ebiten.DrawImageOptions{}
 				op.GeoM.Translate(base.X, base.Y)
-				screen.DrawImage(sprites.NewManager().GetSprite(sprites.Barbell), op)
+				screen.DrawImage(e.spriteManager.GetSprite(sprites.Cross), op)
 			}
 		}
 	}
