@@ -1,0 +1,21 @@
+<html lang="en">
+<head>
+    <title>CTFCUP Final Board</title>
+</head>
+<body>
+{{ define "teamList" }}
+{{ range .Teams }}
+<div>
+    <h1>{{ .TeamName }} ( {{.Points}} )</h1>
+    <h3>Items Collected:
+        <ul>
+        {{ range .ItemsCollected }}
+            <h3><li>{{ . }}</li></h3>
+        {{ end }}
+        </ul>
+    </h3>
+</div>
+{{ end }}
+{{ end }}
+</body>
+</html>
