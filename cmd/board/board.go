@@ -3,12 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/grpcauth"
-	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/sprites"
-	gameserverpb "github.com/c4t-but-s4d/ctfcup-2023-igra/proto/go/gameserver"
-	bolt "go.etcd.io/bbolt"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"html/template"
 	"log"
 	"net/http"
@@ -17,6 +11,14 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	bolt "go.etcd.io/bbolt"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/grpcauth"
+	"github.com/c4t-but-s4d/ctfcup-2023-igra/internal/sprites"
+	gameserverpb "github.com/c4t-but-s4d/ctfcup-2023-igra/proto/go/gameserver"
 )
 
 type hostInfo struct {
@@ -40,7 +42,7 @@ type server struct {
 	mng *sprites.Manager
 }
 
-func (s *server) renderIndex(w http.ResponseWriter, r *http.Request) {
+func (s *server) renderIndex(w http.ResponseWriter, _ *http.Request) {
 	itemsCollected := make(map[string][]string)
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		for teamName := range teamToHost {
@@ -49,10 +51,12 @@ func (s *server) renderIndex(w http.ResponseWriter, r *http.Request) {
 				log.Printf("bucket %s not found", teamName)
 				continue
 			}
-			return b.ForEach(func(k, v []byte) error {
+			if err := b.ForEach(func(k, v []byte) error {
 				itemsCollected[teamName] = append(itemsCollected[teamName], string(k))
 				return nil
-			})
+			}); err != nil {
+				return fmt.Errorf("iterating over bucket: %w", err)
+			}
 		}
 		return nil
 	}); err != nil {
@@ -68,7 +72,7 @@ func (s *server) renderIndex(w http.ResponseWriter, r *http.Request) {
 		Teams []Team
 	}
 
-	var teams []Team
+	var teams = make([]Team, 0, len(teamToHost))
 	for teamName := range teamToHost {
 		teams = append(teams, Team{
 			TeamName:       teamName,
@@ -138,7 +142,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to open db: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		_ = db.Close()
+	}()
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
