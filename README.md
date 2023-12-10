@@ -33,23 +33,20 @@ AUTH_TOKEN=TestTeam:test go run cmd/client/main.go -s "localhost:8085" -l level-
 ## Screenshots
 
 ### Level 1
-![Level 1 run](./screenshots/level-1-run.png)
-![Level 1 boss](./screenshots/level-1-boss.png)
+![Level 1 run](./screenshots/level-1-run.png) ![Level 1 boss](./screenshots/level-1-boss.png)
 
 ### Level 2
-![Level 2 jump](./screenshots/level-2-jump.png)
-![Level 2 slon](./screenshots/level-2-slon.png)
+![Level 2 jump](./screenshots/level-2-jump.png) ![Level 2 slon](./screenshots/level-2-slon.png)
 
 ### Level 3
-![Level 3 boss](./screenshots/level-3-boss.png)
-![Level 2 llm](./screenshots/level-3-llm.png)
+![Level 3 boss](./screenshots/level-3-boss.png) ![Level 2 llm](./screenshots/level-3-llm.png)
 
 
 ## Credits
 
 - [Ilya Grekov](https://github.com/b1r1b1r1): Game development, level-design, crypto task development.
 - [Ivan Novikov](https://github.com/jnovikov): Game development, level-design.
-- [Roman Nikitin](https://github.com/pomo-mondreganto)]: Game development, LLM task&infrastructure development.
+- [Roman Nikitin](https://github.com/pomo-mondreganto): Game development, LLM task&infrastructure development.
 - [Nikita Pokrovsky](https://github.com/falamous): Task development (wise-tree).
 - [Galilea Anri](https://vk.com/mangalileathecreativesquad): Artwork.
 
