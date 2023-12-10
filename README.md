@@ -1,10 +1,10 @@
 # ctfcup-2023-igra
 
-This is a repository with a CTF game for the [CTFCUP 2023](https://ctfcup.ru/) finals.
+Source code of the CTF game developed for the [CTFCUP 2023](https://ctfcup.ru/) finals.
 
-Game consists of 3 levels. There are four items on every level the player can collect.
+Game consists of 3 levels. There are 4 items on every level the player can collect.
 Participants were given a source code of the game, level and the game server connection info.
-The challenge was to collect as many items as possible on the level. To do so, participants may want to write cheats, exploit the game engine bugs and so on.
+The challenge was to collect as many items as possible on the level. To do so, participants were allowed to write cheats, exploit the game engine bugs and so on.
 Game format is inspired by [Google's hackceler8](https://capturetheflag.withgoogle.com/hackceler8).
 
 ## How to run
